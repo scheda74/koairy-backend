@@ -40,6 +40,7 @@ class NeuralNet():
         input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], 
         output_key='pm10'
     ):
+        boxID = int(boxID)
         input_keys.append(boxID)
         df = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
         data = df.copy()

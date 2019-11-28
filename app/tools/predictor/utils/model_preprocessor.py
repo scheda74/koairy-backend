@@ -73,6 +73,7 @@ class ModelPreProcessor():
     ################################## DATA AGGREGATION FUNCTIONS ########################################
     ######################################################################################################
     async def aggregate_data(self, boxID=672, start_date='2019-08-01', end_date='2019-11-10', start_hour='7:00', end_hour='10:00'):
+        boxID=int(boxID)
         data = await get_aggregated_data_from_sim(self.db, self.sim_id)
         if data is not None:
             try:
@@ -140,6 +141,7 @@ class ModelPreProcessor():
 
 
     async def aggregate_real_data(self, boxID=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
+        boxID=int(boxID)
         df_air = await self.fetch_air_and_traffic(boxID, start_date, end_date, start_hour, end_hour)
         df_air.index.name = 'time'
 
@@ -168,6 +170,7 @@ class ModelPreProcessor():
 
     async def fetch_air_and_traffic(self, boxID, start_date='2019-08-01', end_date='2019-11-01', start_hour='7:00', end_hour='10:00'):
         # NOTE: Get real weather data and format it accordingly. Here we'll look at 2019 from 7:00 to 10:00
+        boxID = int(boxID)
         df_traffic = await get_bremicker_by_time(
             self.db,
             boxID,

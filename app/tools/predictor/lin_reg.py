@@ -129,7 +129,7 @@ class LinReg():
         boxID=672, 
         input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], 
         output_key='pm10'
-    ):  
+    ):
         input_keys.append(boxID)
 
         df_combined = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
@@ -137,7 +137,7 @@ class LinReg():
         rows = round(df_combined.shape[0] * 0.8)
         df_train = df_combined.iloc[:rows]
         df_test = df_combined.iloc[rows:]
-        
+
         # regr = await self.train_model(df_train, input_keys, output_key)
 
         if data != None:

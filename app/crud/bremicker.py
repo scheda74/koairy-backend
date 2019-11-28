@@ -21,7 +21,10 @@ from app.core.config import (
 async def get_bremicker_by_time(conn: AsyncIOMotorClient, boxID, start_date='2019-08-01', end_date='2019-11-01', start_hour='07:00', end_hour='10:00'):
     boxID = int(boxID)
     bremicker = await get_bremicker(conn, start_date, end_date)
-    df_traffic = pd.DataFrame(pd.read_json(bremicker['data']))
+    if bremicker['data']:
+        df_traffic = pd.DataFrame(pd.read_json(bremicker['data']))
+    else:
+        df_traffic = pd.DataFrame(pd.read_json(bremicker))
     df_traffic.index.name = 'time'
     df = df_traffic.reset_index()[['time', boxID]]
     mask = (df['time'] > start_date) & (df['time'] <= end_date)
@@ -32,8 +35,11 @@ async def get_bremicker_by_time(conn: AsyncIOMotorClient, boxID, start_date='201
 async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30'):
     data = await conn[database_name][bremicker_collection_name].find_one({}, projection={"_id": False})
     if not data:
-        await fetch_bremicker(conn, start_date, end_date)
-        await get_bremicker(conn, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+        response = await fetch_bremicker(conn, start_date, end_date)
+        if response:
+            return await get_bremicker(conn, start_date, end_date)
+        else:
+            return None
     return data
 
 async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=None, end_date=None, start_hour='07:00', end_hour='10:00'):
@@ -66,6 +72,7 @@ async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end
         
     except JSONDecodeError as error:
         print('error in json decoding: %s' % error)
+        return None
     else:
         return response
 
