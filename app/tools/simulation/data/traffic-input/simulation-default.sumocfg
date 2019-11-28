@@ -1,0 +1,17 @@
+<configuration>
+  <input>
+    <net-file value="road-network-default.net.xml"/>
+    <route-files value="route-01037010010010180101018005.rou.xml"/>
+    <gui-settings-file value="gui-settings-origin-dest-vehicles.cfg"/>
+  </input>
+  <output>
+    
+  </output>
+  <time>
+    <begin value="0"/>
+    <end value="10800"/>
+  </time>
+  <processing>
+    <ignore-junction-blocker value="1"/>
+  </processing>
+</configuration>
