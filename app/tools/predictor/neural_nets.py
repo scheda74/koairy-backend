@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 import datetime
 import json
 import math
-
+from app.core.config import (
+    PLOT_BASEDIR
+)
 from fastapi import Depends
 from app.db.mongodb import AsyncIOMotorClient, get_database
 
@@ -43,18 +45,21 @@ class NeuralNet():
         data = df.copy()
         data.index = data.index.strftime('%Y-%m-%d %H:%M')
 
+        # self.save_df_to_plot(df[['pm10', 'no2']], 'new_pollutant_compare')
+
         # values = data.values
-        # specify columns to plot
+        # # specify columns to plot
         # groups = [0, 1, 2, 3, 5, 6, 7, 10, 11, 12, 13]
         # i = 1
-        # # plot each column
-        # plt.figure()
+        # plot each column
+        # plt.figure(figsize=(20, 10))
         # for group in groups:
         #     plt.subplot(len(groups), 1, i)
         #     plt.plot(values[:, group])
         #     plt.title(data.columns[group], y=0.5, loc='right')
         #     i += 1
-        # plt.show()
+        # # plt.show()
+        # plt.savefig(PLOT_BASEDIR + '/new_aggr_data')
 
         # feature_range=(0, 100)
         scaler = pre.MinMaxScaler()
@@ -122,9 +127,10 @@ class NeuralNet():
         df_pred = df.iloc[rows:]
         # df_pred["%s_predicted" % output_key] = testPredict
         # print(df_pred[[output_key]])
-        result = pd.concat([data.iloc[:rows][[output_key]].reset_index(), testPredict], axis=1).dropna()
+        result = pd.concat([data.iloc[rows:][[output_key]].reset_index(), testPredict], axis=1).dropna()
         result = result.set_index('index').rename(columns={0: '%s_predicted' % output_key})
         print(result)
+        # self.save_df_to_plot(result, 'new_lstm_no2')
         # result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result
 
@@ -182,3 +188,10 @@ class NeuralNet():
     #     if dropnan:
     #         agg.dropna(inplace=True)
     #     return agg
+
+    def save_df_to_plot(self, df, filename):
+        if not df.empty:
+            df.plot(figsize=(18, 5))
+            plt.savefig(PLOT_BASEDIR + '/' + filename)
+        else:
+            print('[PLOT] Error saving plot. Dataframe empty!')

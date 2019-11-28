@@ -87,7 +87,7 @@ class LinReg():
         result = df_test[['MeanAbsErr', output_key, '%s_mlp_predicted' % output_key]]
         # print(result)
         print("Mean Abs Error MLP: " + str(mean_absolute_error(result[output_key].to_numpy(), result['%s_mlp_predicted' % output_key].to_numpy())))
-        # self.save_df_to_plot(result, '%s_mlp_dist_regressor' % output_key.replace('.', '-'))
+        # self.save_df_to_plot(result[[output_key, '%s_mlp_predicted' % output_key]], 'new_%s_mlp_dist_regressor' % output_key.replace('.', '-'))
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result
 
@@ -126,10 +126,10 @@ class LinReg():
         df_test[output_key + '_lin_predicted'] = model.predict(df_test[input_keys])
         df_test['MeanAbsErr'] = str(mean_absolute_error(df_test[output_key].to_numpy(), df_test['%s_lin_predicted' % output_key].to_numpy()))
         # print(df_test)
-        # self.save_df_to_plot(df_test[[output_key, '%s_predicted' % output_key]], '%s_lin_dist_prediction' % output_key)
         # df_test = df_test.reset_index()
         result = df_test[['MeanAbsErr', output_key, '%s_lin_predicted' % output_key]]
         print("Mean Abs Error LinReg: " + str(mean_absolute_error(result[output_key].to_numpy(), result['%s_lin_predicted' % output_key].to_numpy())))
+        # self.save_df_to_plot(result[[output_key, '%s_lin_predicted' % output_key]], 'new_%s_lin_dist_prediction' % output_key)
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result
 
