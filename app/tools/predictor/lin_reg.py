@@ -21,6 +21,7 @@ from app.core.config import (
 )
 
 from fastapi import Depends
+from app.crud.bremicker import (get_bremicker_by_time, get_current_bremicker_by_time)
 from app.db.mongodb import AsyncIOMotorClient, get_database
 
 from keras.models import Sequential
@@ -42,16 +43,40 @@ class LinReg():
         self.real_emission_columns = ['no2', 'pm2.5', 'pm10', 'o3', 'WIND_SPEED', 'WIND_DIR']
         self.mp = ModelPreProcessor(self.db, self.sim_id)
 
+    # async def start_mlp(
+    #         self,
+    #         start_date='2019-08-01',
+    #         end_date='2019-10-20',
+    #         start_hour='7:00',
+    #         end_hour='10:00',
+    #         data=None,
+    #         boxID=672,
+    #         input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
+    #         output_key='pm10'
+    # ):
+    #     input_keys.append(boxID)
+        # df = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
+        # df_brem = await get_bremicker_by_time(self.db, '2019-11-28', '2019-11-28', '07:00', '10:00')
+        # df_brem = await get_bremicker_by_time(
+        #     self.db,
+        #     boxID,
+        #     '2019-11-27',
+        #     '2019-11-28',
+        #     '07:00',
+        #     '10:00'
+        # )
+        # result = await get_current_bremicker_by_time(self.db, start_hour='07:00', end_hour='10:00')
+        # print(result)
 
     async def start_mlp(
         self,
-        start_date='2019-08-01', 
-        end_date='2019-10-20', 
-        start_hour='7:00', 
-        end_hour='10:00', 
-        data=None, 
-        boxID=672, 
-        input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], 
+        start_date='2019-08-01',
+        end_date='2019-10-20',
+        start_hour='7:00',
+        end_hour='10:00',
+        data=None,
+        boxID=672,
+        input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
         output_key='pm10'
     ):
         input_keys.append(boxID)
@@ -76,7 +101,7 @@ class LinReg():
             alpha=0.01
         )
         model.fit(train_scaled, df_train[output_key])
-        
+
         # df_test[output_key + '_mlp_predicted'] = model.predict(df_test[input_keys])
         df_test[output_key + '_mlp_predicted'] = model.predict(test_scaled)
         df_test = df_test[[output_key, '%s_mlp_predicted' % output_key]]
@@ -185,13 +210,6 @@ class LinReg():
         # print(df_test)
         # self.save_df_to_plot(df_test[['pm10', 'predicted']], 'tbats_pm10_forecast')
     # convert an array of values into a dataset matrix
-
-
-
-
-
-
-
 
     def save_df_to_plot(self, df, filename):
         if not df.empty:
