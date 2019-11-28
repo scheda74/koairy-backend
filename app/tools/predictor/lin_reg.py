@@ -4,7 +4,6 @@ import pandas as pd
 import datetime
 import json
 import math
-from tbats import BATS, TBATS
 
 from app.tools.simulation.parse_emission import Parser
 from app.tools.predictor.utils.bremicker_boxes import bremicker_boxes
@@ -159,29 +158,29 @@ class LinReg():
         return result
 
 
-    async def start_tbats(
-        self,
-        start_date='2019-08-01', 
-        end_date='2019-10-20', 
-        start_hour='7:00', 
-        end_hour='10:00', 
-        data=None, 
-        boxID=672, 
-        input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], 
-        output_key='pm10'
-    ):
-        input_keys.append(boxID)
-        df = await self.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
-        # print('aggregated')
-        # print(df)
-
-        rows = round(df.shape[0] * 0.8)
-        df_train = df.iloc[:rows]
-        df_test = df.iloc[rows:]
-        # scaler = pre.StandardScaler()
-        scaler = pre.MinMaxScaler(feature_range=(0, 100))
-        df_train[['pm10']] = scaler.fit_transform(df_train[['pm10']])
-        print(df_train)
+    # async def start_tbats(
+    #     self,
+    #     start_date='2019-08-01',
+    #     end_date='2019-10-20',
+    #     start_hour='7:00',
+    #     end_hour='10:00',
+    #     data=None,
+    #     boxID=672,
+    #     input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
+    #     output_key='pm10'
+    # ):
+    #     input_keys.append(boxID)
+    #     df = await self.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
+    #     # print('aggregated')
+    #     # print(df)
+    #
+    #     rows = round(df.shape[0] * 0.8)
+    #     df_train = df.iloc[:rows]
+    #     df_test = df.iloc[rows:]
+    #     # scaler = pre.StandardScaler()
+    #     scaler = pre.MinMaxScaler(feature_range=(0, 100))
+    #     df_train[['pm10']] = scaler.fit_transform(df_train[['pm10']])
+    #     print(df_train)
         # test_scaled = scaler.fit_transform(df_test[input_keys])
         #[val for val in np.arange(4, 320, 80)]
         
