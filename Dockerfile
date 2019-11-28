@@ -42,6 +42,7 @@ WORKDIR /
 COPY poetry.lock /
 COPY pyproject.toml .
 RUN pip3 install poetry && \
+    pip3 install --upgrade tensorflow && \
     poetry config settings.virtualenvs.create false && \
     poetry install -v
 
