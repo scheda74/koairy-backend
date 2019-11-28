@@ -2,7 +2,7 @@ import os
 import json
 import datetime
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from fastapi import APIRouter, Depends
 from starlette.responses import FileResponse, RedirectResponse
 
@@ -75,21 +75,21 @@ async def get_sensors(db: AsyncIOMotorClient=Depends(get_database)):
     lr = LinReg(db)
     # await lr.get_hw_data()
 
-@router.post('/get/plot')
-async def get_plot(inputs: PlotInput = example_plot_input, db: AsyncIOMotorClient=Depends(get_database)):
-    """
-    Plot a line chart of the given attributes in a specific timeframe
-    """
-    lr = LinReg(db)
-    df = await lr.aggregate_data(inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
-    df = df[inputs.keys_to_compare]
+# @router.post('/get/plot')
+# async def get_plot(inputs: PlotInput = example_plot_input, db: AsyncIOMotorClient=Depends(get_database)):
+#     """
+#     Plot a line chart of the given attributes in a specific timeframe
+#     """
+#     lr = LinReg(db)
+#     df = await lr.aggregate_data(inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
+#     df = df[inputs.keys_to_compare]
 
-    filename = PLOT_BASEDIR + '/' + 'fromrequest'
-    df.plot(figsize=(18, 5))
-    plt.ioff()
-    plt.savefig(filename)
+    # filename = PLOT_BASEDIR + '/' + 'fromrequest'
+    # df.plot(figsize=(18, 5))
+    # plt.ioff()
+    # plt.savefig(filename)
     # return FileResponse(plt.savefig(), media_type='image/png')
-    return 'Done'
+    # return 'Done'
 
 
 def generate_id(inputs):

@@ -1,6 +1,6 @@
 import numpy as np 
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import datetime
 import json
 import math
@@ -248,9 +248,9 @@ class ModelPreProcessor():
     #     )
 
 
-    def save_df_to_plot(self, df, filename):
-        if not df.empty:
-            df.plot(figsize=(18, 5))
-            plt.savefig(PLOT_BASEDIR + '/' + filename)
-        else:
-            print('[PLOT] Error saving plot. Dataframe empty!')
+    # def save_df_to_plot(self, df, filename):
+    #     if not df.empty:
+    #         df.plot(figsize=(18, 5))
+    #         plt.savefig(PLOT_BASEDIR + '/' + filename)
+    #     else:
+    #         print('[PLOT] Error saving plot. Dataframe empty!')
