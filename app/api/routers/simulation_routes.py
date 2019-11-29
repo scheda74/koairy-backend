@@ -1,13 +1,14 @@
-import json
 from fastapi import APIRouter, Depends
+from ...tools.simulation.parse_emission import Parser
+from ...tools.simulation.simulator import Simulator
+from ...tools.simulation.preprocessor import SimulationPreProcessor
+from ...tools.simulation.single_preprocessor import SingleSimulationPreProcessor
 
-
-from app.tools.simulation.parse_emission import Parser
-from app.tools.simulation.simulator import Simulator
-from app.tools.simulation.preprocessor import SimulationPreProcessor
-
-from app.models.simulation_input import SimulationInput, example_simulation_input
-from app.db.mongodb import AsyncIOMotorClient, get_database
+from ...models.simulation_input import SimulationInput, example_simulation_input
+from ...models.single_simulation_input import SingleSimulationInput, example_single_simulation_input
+from ...db.mongodb import AsyncIOMotorClient, get_database
+from ...crud.bremicker import get_current_bremicker_by_time
+from .utils import (generate_id, generate_single_id)
 
 router = APIRouter()
 
@@ -29,9 +30,43 @@ async def start_simulation(inputs: SimulationInput = example_simulation_input, d
     cfg_filepath = await processor.preprocess_simulation_input()
 
     print("Starting SUMO...")
-    simulator = Simulator(db, cfg_filepath, sim_id)
+    simulator = Simulator(db, cfg_filepath, sim_id, timesteps=inputs.timesteps)
     await simulator.start()
     
+    print("Parsing results...")
+    parser = Parser(db, sim_id)
+    return await parser.get_caqi_data()
+
+
+@router.post('/simulation/single')
+async def start_single_simulation(inputs: SingleSimulationInput = example_single_simulation_input,
+                                  db: AsyncIOMotorClient = Depends(get_database)
+                                  ):
+    """
+    Starts a new simulation with given input parameters...
+    """
+    sim_id = generate_single_id(inputs)
+    print("Starting PreProcessor...")
+    df_traffic = None
+    if inputs.vehicleNumber is None:
+        df_traffic = await get_current_bremicker_by_time(
+                    db,
+                    start_hour=inputs.start_hour,
+                    end_hour=inputs.end_hour,
+                )
+    processor = SingleSimulationPreProcessor(
+        sim_id=sim_id,
+        timesteps=inputs.timesteps,
+        vehicleNumber=inputs.vehicleNumber,
+        veh_dist=inputs.vehicleDistribution,
+        df_traffic=df_traffic
+    )
+    cfg_filepath = await processor.preprocess_simulation_input()
+
+    print("Starting SUMO...")
+    simulator = Simulator(db, cfg_filepath, sim_id)
+    await simulator.start_single()
+
     print("Parsing results...")
     parser = Parser(db, sim_id)
     return await parser.get_caqi_data()
@@ -54,8 +89,3 @@ async def generate_weights(inputs: SimulationInput = example_simulation_input, d
     return "File written"
 
 
-def generate_id(inputs):
-    src_weights = "".join([str(v).replace('.', '') for v in inputs.srcWeights.values()])
-    dst_weights = "".join([str(v).replace('.', '') for v in inputs.dstWeights.values()])
-    veh_dist = "".join([str(v).replace('.', '') for v in inputs.vehicleDistribution.values()])
-    return ("%s_%s_%s_%s_%s_%s" % (src_weights, dst_weights, veh_dist, inputs.vehicleNumber, inputs.timesteps, inputs.weatherScenario))

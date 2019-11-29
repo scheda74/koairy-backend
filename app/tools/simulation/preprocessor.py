@@ -82,25 +82,12 @@ class SimulationPreProcessor():
         self.fringe_factor = fringe_factor
         self.new_net_path = new_net_path
 
-        # self.weights = "".join([str(v).replace('.', '') for v in self.weights_per_area.values()])
         self.weights_filepath = WEIGHT_INPUT + "%s.src.xml" % self.sim_id
         self.weights_filepath_prefix = WEIGHT_INPUT + self.sim_id
         self.trip_filepath = TRIP_OUTPUT + self.sim_id + ".trip.xml"
         self.route_filepath = ROUTE_OUTPUT + self.sim_id + ".rou.xml"
         self.net_filepath = new_net_path if new_net_path != None else DEFAULT_NET_INPUT
         self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
-        
-        # self.veh_dist = {
-        #     diesel: {
-        #         'eu-4': 0.3,
-        #         'eu-6': 0.3
-        #     },
-        #     gasoline: {
-        #         'eu-4': 0.3,
-        #         'eu-6': 0.3
-        #     },
-        #     electric: 
-        # }
 
     def write_sumocfg_file(self):
         configuration_tag = ET.Element('configuration')
