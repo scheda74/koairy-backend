@@ -152,16 +152,13 @@ class ModelPreProcessor():
         boxID=int(boxID)
         df_air = await self.fetch_air_and_traffic(boxID, start_date, end_date, start_hour, end_hour)
         df_air.index.name = 'time'
+        print(df_air[['no2', 'pm10']])
         df_sim = await self.fetch_simulated_emissions(boxID)
         df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
-        print(df_sim)
 
-        sim_rows = df_sim.shape[0]
-        air_rows = df_air.shape[0]
-        rows_needed = (air_rows / (sim_rows / 60))
         # print(df_sim)
         df_sim = df_sim.groupby(df_sim.index // 60)[self.raw_emission_columns].sum()
-
+        print(df_sim)
         return df_sim
         # return [df_air, df_sim]
 

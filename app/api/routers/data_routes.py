@@ -62,11 +62,11 @@ async def compare_traffic(inputs: SinglePredictionInput = example_single_predict
         inputs.vehicleNumber = df_traffic[inputs.boxID].sum() if df_traffic is not None else 1000
     sim_id = generate_single_id(inputs)
     processor = ModelPreProcessor(db, sim_id)
-    df = await processor.aggregate_data(inputs.boxID, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
-    # df = await processor.aggregate_compare(inputs.boxID, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
-    # print(df)
-    print(df[[inputs.boxID, 'NOx', 'no2', 'PMx', 'pm10']])
-    df = df[[inputs.boxID, 'NOx', 'no2', 'PMx', 'pm10']]
-    df = df.rename(columns={inputs.boxID: '#vehicles'})
-    df.index = df.index.strftime("%Y-%m-%d %H:%M")
+    # df = await processor.aggregate_data(inputs.boxID, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
+    # print(df[[inputs.boxID, 'NOx', 'no2', 'PMx', 'pm10']])
+    # df = df[[inputs.boxID, 'NOx', 'no2', 'PMx', 'pm10']]
+    # df = df.rename(columns={inputs.boxID: '#vehicles'})
+    # df.index = df.index.strftime("%Y-%m-%d %H:%M")
+    # return df.to_dict(orient='index')
+    df = await processor.aggregate_compare(inputs.boxID, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
     return df.to_dict(orient='index')
