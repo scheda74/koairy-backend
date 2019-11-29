@@ -41,8 +41,8 @@ else:
 
 
 BASEDIR = os.path.dirname(simulation.__file__)
-DEFAULT_NET_INPUT = BASEDIR + "/data/traffic-input/road-network-default.net.xml"
-NET_BASEDIR = BASEDIR + "/data/traffic-input/road-network_"
+DEFAULT_NET_INPUT = BASEDIR + "/data/traffic-input/net/road-network-default.net.xml"
+NET_BASEDIR = BASEDIR + "/data/traffic-input/net/road-network_"
 TRAFFIC_INPUT_BASEDIR = BASEDIR + "/data/traffic-input/"
 DET_OUT_BASEDIR = BASEDIR + "/data/traffic-input/det_"
 AREA_OF_INTEREST = BASEDIR + "/data/traffic-input/areas-of-interest.taz.xml"

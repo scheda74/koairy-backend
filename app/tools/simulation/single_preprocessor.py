@@ -3,7 +3,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 from lxml import etree
 from random import choices
-from ...tools.predictor.utils import bremicker_boxes
+from ...tools.predictor.utils.bremicker_boxes import bremicker_boxes
 from ...core.config import (
     AREA_OF_INTEREST,
     WEIGHT_INPUT,
@@ -56,28 +56,34 @@ class SingleSimulationPreProcessor:
         self.sim_id = sim_id
         self.boxID = boxID
         self.timesteps = timesteps
-        self.agents = vehicleNumber
         self.veh_dist = veh_dist
         self.fringe_factor = fringe_factor
         self.df_traffic = df_traffic
 
+        if vehicleNumber is None:
+            if self.df_traffic is None:
+                self.agents = 400 # default value if user didn't specify it and bremicker request failed
+            else:
+                self.agents = self.df_traffic[self.boxID].max()
+        else:
+            self.agents = vehicleNumber
+
         self.trip_filepath = TRIP_OUTPUT + self.sim_id + ".trip.xml"
         self.route_filepath = ROUTE_OUTPUT + self.sim_id + ".rou.xml"
         self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
-        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s_.add.xml" % self.boxID
+        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.boxID
         self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.boxID
 
         new_net_path = NET_BASEDIR + "%s.net.xml" % boxID
-        if not os.path.exists(self.cfg_filepath):
+        if not os.path.exists(new_net_path):
             new_net_path = DEFAULT_NET_INPUT
         self.net_filepath = new_net_path
 
         self.net = sumolib.net.readNet(self.net_filepath)
 
-        if self.agents is None:
-            if self.df_traffic is None:
-                self.agents = 400
-            self.agents = self.df_traffic[self.boxID].max()
+
+
+
 
     def write_sumocfg_file(self):
         configuration_tag = ET.Element('configuration')
@@ -133,7 +139,6 @@ class SingleSimulationPreProcessor:
                  (self.timesteps / (self.agents * 1.0))
                  )
         subprocess.call(cmd.split())
-
         self.add_vehicle_type_to_routes()
 
     def add_vehicle_type_to_routes(self):
@@ -154,10 +159,9 @@ class SingleSimulationPreProcessor:
 
         tree.write(self.route_filepath)
 
-    async def write_detector_add_file(self):
+    def write_detector_add_file(self):
         detectors = []
-        box = bremicker_boxes[self.boxID]
-        xy_pos = self.net.convertLonLat2XY(box.lng, box.lat)
+        xy_pos = self.net.convertLonLat2XY(bremicker_boxes[self.boxID]['lng'], bremicker_boxes[self.boxID]['lat'])
         # look 10m around the position
         lanes = self.net.getNeighboringLanes(xy_pos[0], xy_pos[1], 10)
         # attention, result is unsorted
@@ -170,12 +174,13 @@ class SingleSimulationPreProcessor:
                 ref_d = dist
                 bestLane = lane
         pos, d = bestLane.getClosestLanePosAndDist(xy_pos)
-        detectors.append(sumolib.sensors.inductive_loop.InductiveLoop('det_0', bestLane.getID(), pos, (self.timesteps / 3600), self.det_out_filepath))
+        detectors.append(sumolib.sensors.inductive_loop.InductiveLoop('det_0', bestLane.getID(), pos, (self.timesteps / 3600), self.det_out_filepath, friendlyPos=False))
         sumolib.files.additional.write(self.add_filepath, detectors)
 
     async def preprocess_simulation_input(self):
         if not os.path.exists(self.cfg_filepath):
             self.write_sumocfg_file()
+            self.write_detector_add_file()
             self.write_random_trips_and_routes()
         elif not os.path.exists(self.cfg_filepath):
             self.write_sumocfg_file()

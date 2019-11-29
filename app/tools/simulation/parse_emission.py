@@ -11,16 +11,16 @@ from lxml import etree
 from operator import itemgetter
 from timeit import default_timer as timer
 # from app.db.mongodb import DB
-from app.tools.simulation.calc_caqi import calc_indices
-from app.tools.simulation.preprocessor import SimulationPreProcessor as ip
-from app.core.config import DEFAULT_NET_INPUT, EMISSION_OUTPUT_BASE
-from app.crud.emissions import (
+from ...tools.simulation.calc_caqi import calc_indices
+from ...tools.simulation.preprocessor import SimulationPreProcessor as ip
+from ...core.config import DEFAULT_NET_INPUT, EMISSION_OUTPUT_BASE
+from ...crud.emissions import (
     get_caqi_emissions_for_sim,
     get_raw_emissions_from_sim,
     insert_caqi_emissions,
     insert_raw_emissions
 )
-from app.db.mongodb import AsyncIOMotorClient
+from ...db.mongodb import AsyncIOMotorClient
 
 if 'SUMO_HOME' in os.environ:
     tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
@@ -61,25 +61,19 @@ class Parser():
         df = pd.DataFrame(
             self.extract_attributes(context, coords + entries + ['time']),
             columns=coords + entries + ['time'], dtype=np.float)
-        # print(df)
+
         # convert *all coordinates together*, remove the x, y columns
         # note that the net.convertXY2LonLat() call *alters the 
         # numpy arrays in-place* so we don’t want to keep them anyway. 
         df['lng'], df['lat'] = net.convertXY2LonLat(df.x.to_numpy(), df.y.to_numpy())
         df.drop(coords, axis=1, inplace=True)
-        # df = df.reset_index()
-        # # 'group' data by rounding the latitude and longitude
-        # # effectively creating areas of 1/10000th degrees per side
+        # effectively creating areas of 1/10000th degrees per side
         latlng = ['lat', 'lng']
         df[latlng] = df[latlng].round(3)
         # df[entries] = df[entries].resample('60s', how='sum')
         # df = df.groupby(['time', 'lat', 'lng'])[entries].sum()
         # df = df.reset_index()
         return df.groupby([df.time // 60, 'lat', 'lng'])[entries].sum()
-        # return df.groupby(['time', 'lat', 'lng'])[entries].sum()
-        # return df
-        # aggregate the results and return summed dataframe
-        # return df.groupby(latlng)[entries].sum()
 
     async def get_caqi_data(self):
         caqi = await get_caqi_emissions_for_sim(self.db, self.sim_id)

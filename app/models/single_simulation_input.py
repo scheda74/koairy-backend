@@ -4,7 +4,7 @@ from pydantic import BaseModel, Schema
 
 class SingleSimulationInput(BaseModel):
     vehicleDistribution: Dict[str, float] = Schema(..., description='Distribution of emission classes')
-    vehicleNumber: int = 9500
+    vehicleNumber: int = Schema(None, description="Specify number of vehicles")
     timesteps: int = Schema(10800, description="Seconds of simulation, default 10800s => 3 hours")
     boxID: int = Schema(672, description='Select sensor location')
     start_hour: str = Schema('07:00', description='Select sensor location')
