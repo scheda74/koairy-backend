@@ -41,6 +41,7 @@ async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01
             if measure_date >= start_date and measure_date <= end_date:
                 result.append(data)
         else:
+            print('[HAWADAWA] No data in db. Fetching from server')
             response = await fetch_air_traffic(conn)
             if response:
                 return await get_hawa_dawa_by_time(conn, start_date, end_date, start_hour, end_hour)
@@ -48,10 +49,12 @@ async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01
                 print('[HAWA DAWA] error while fetching')
                 return None
 
-    if len(result) == 0: 
+    if len(result) == 0:
+        print('[HAWADAWA] No data in db. Fetching from server')
         await fetch_air_traffic(conn, '2019-01-01')
         return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
-
+    print('hawa dawa result')
+    print(result)
     df = await format_to_df(result)
     df = df.reset_index()
     mask = (df['time'] > start_date) & (df['time'] <= end_date)

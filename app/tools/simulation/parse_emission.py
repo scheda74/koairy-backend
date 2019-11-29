@@ -13,7 +13,7 @@ from timeit import default_timer as timer
 # from app.db.mongodb import DB
 from ...tools.simulation.calc_caqi import calc_indices
 from ...tools.simulation.preprocessor import SimulationPreProcessor as ip
-from ...core.config import DEFAULT_NET_INPUT, EMISSION_OUTPUT_BASE
+from ...core.config import DEFAULT_NET_INPUT, EMISSION_OUTPUT_BASE, NET_BASEDIR
 from ...crud.emissions import (
     get_caqi_emissions_for_sim,
     get_raw_emissions_from_sim,
@@ -29,13 +29,19 @@ else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
 import sumolib
-net = sumolib.net.readNet(DEFAULT_NET_INPUT)
 
 class Parser():
-    def __init__(self, db: AsyncIOMotorClient, simulation_id):
+    def __init__(self, db: AsyncIOMotorClient, simulation_id, boxID=None):
         self.db = db
         self.sim_id = simulation_id
         self.sim_output_path = EMISSION_OUTPUT_BASE + "emission_output_%s.xml" % self.sim_id
+
+        new_net_path = NET_BASEDIR + "%s.net.xml" % boxID
+        if not os.path.exists(new_net_path) or boxID is None:
+            new_net_path = DEFAULT_NET_INPUT
+        self.net_filepath = new_net_path
+
+        self.net = sumolib.net.readNet(self.net_filepath)
 
     def extract_attributes(self, context, fields):
         # time = itemgetter('time')
@@ -65,11 +71,11 @@ class Parser():
         # convert *all coordinates together*, remove the x, y columns
         # note that the net.convertXY2LonLat() call *alters the 
         # numpy arrays in-place* so we don’t want to keep them anyway. 
-        df['lng'], df['lat'] = net.convertXY2LonLat(df.x.to_numpy(), df.y.to_numpy())
+        df['lng'], df['lat'] = self.net.convertXY2LonLat(df.x.to_numpy(), df.y.to_numpy())
         df.drop(coords, axis=1, inplace=True)
         # effectively creating areas of 1/10000th degrees per side
         latlng = ['lat', 'lng']
-        df[latlng] = df[latlng].round(3)
+        df[latlng] = df[latlng].round(4)
         # df[entries] = df[entries].resample('60s', how='sum')
         # df = df.groupby(['time', 'lat', 'lng'])[entries].sum()
         # df = df.reset_index()

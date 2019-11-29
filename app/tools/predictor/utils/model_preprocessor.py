@@ -6,17 +6,17 @@ import json
 import math
 
 from fastapi import Depends
-from app.db.mongodb import AsyncIOMotorClient, get_database
-from app.crud.emissions import (
+from ....db.mongodb import AsyncIOMotorClient, get_database
+from ....crud.emissions import (
     get_raw_emissions_from_sim,
     get_aggregated_data_from_sim,
     insert_aggregated_data
 )
-from app.crud.hawa_dawa import get_hawa_dawa_by_time
-from app.crud.bremicker import get_bremicker_by_time
-from app.tools.predictor.utils.weather import fetch_weather_data
-from app.tools.simulation.parse_emission import Parser
-from app.tools.predictor.utils.bremicker_boxes import bremicker_boxes
+from ....crud.hawa_dawa import get_hawa_dawa_by_time
+from ....crud.bremicker import get_bremicker_by_time
+from .weather import fetch_weather_data
+from .bremicker_boxes import bremicker_boxes
+from ...simulation.parse_emission import Parser
 import app.tools.simulation.calc_caqi as aqi
 from app.core.config import (
     WEATHER_BASEDIR,
@@ -79,6 +79,7 @@ class ModelPreProcessor():
             try:
                 df = pd.DataFrame.from_dict(data["aggregated"], orient='index')
                 df.index = pd.to_datetime(df.index)
+                df = df.rename(columns={str(boxID): boxID})
                 return df
             except Exception as e:
                 print("[MODEL PREPROCESSOR] Error while formatting aggregated data from db: %s" % str(e))
@@ -111,9 +112,9 @@ class ModelPreProcessor():
         ratio_nox = 1 - (nox_std / nox_mean)
         ratio_pmx = 1 - (pmx_std / pmx_mean)
         
-        # print("%s rows needed" % rows_needed)
-        # print("%s ratio_nox" % ratio_nox)
-        # print("%s ratio_pmx" % ratio_pmx)
+        print("%s rows needed" % rows_needed)
+        print("%s ratio_nox" % ratio_nox)
+        print("%s ratio_pmx" % ratio_pmx)
         
         nox_frames = [df_sim[['NOx']] * val for val in np.arange(1 - ratio_nox, 1 + ratio_nox, (ratio_nox * 2) / rows_needed)]
         df_nox = pd.concat(nox_frames, axis=0, ignore_index=True)
@@ -146,6 +147,23 @@ class ModelPreProcessor():
         df_air.index.name = 'time'
 
         return df_air
+
+    async def aggregate_compare(self, boxID=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
+        boxID=int(boxID)
+        df_air = await self.fetch_air_and_traffic(boxID, start_date, end_date, start_hour, end_hour)
+        df_air.index.name = 'time'
+        df_sim = await self.fetch_simulated_emissions(boxID)
+        df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
+        print(df_sim)
+
+        sim_rows = df_sim.shape[0]
+        air_rows = df_air.shape[0]
+        rows_needed = (air_rows / (sim_rows / 60))
+        # print(df_sim)
+        df_sim = df_sim.groupby(df_sim.index // 60)[self.raw_emission_columns].sum()
+
+        return df_sim
+        # return [df_air, df_sim]
 
     #####################################################################################################
     ################################## DATA COLLECTION FUNCTIONS ########################################

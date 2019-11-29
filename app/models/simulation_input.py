@@ -8,6 +8,7 @@ class SimulationInput(BaseModel):
     srcWeights: Dict[str, float] = Schema(..., description='Percentage of how many vehicles (agents) start from an area')
     dstWeights: Dict[str, float] = Schema(..., description='Percentage of how many vehicles (agents) end in an area')
     vehicleNumber: int = 9500
+    boxID: int = Schema(672, description="Specify bremicker box id")
     timesteps: int = Schema(10800, description="Seconds of simulation, default 10800s => 3 hours")
 
 example_simulation_input = Body(
@@ -52,6 +53,7 @@ example_simulation_input = Body(
             'unassigned_edges': 0.05
         },
         'vehicleNumber': 9500,
-        'timesteps': 10800
+        'timesteps': 10800,
+        'boxID': 672
     }
 )

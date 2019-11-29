@@ -34,7 +34,7 @@ async def start_simulation(inputs: SimulationInput = example_simulation_input, d
     await simulator.start()
     
     print("Parsing results...")
-    parser = Parser(db, sim_id)
+    parser = Parser(db, sim_id, inputs.boxID)
     return await parser.get_caqi_data()
 
 
@@ -76,7 +76,7 @@ async def start_single_simulation(inputs: SingleSimulationInput = example_single
     await simulator.start_single()
 
     print("Parsing results...")
-    parser = Parser(db, sim_id)
+    parser = Parser(db, sim_id, inputs.boxID)
     result = await parser.get_caqi_data()
     print(result)
 

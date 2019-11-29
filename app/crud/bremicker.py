@@ -35,6 +35,7 @@ async def get_bremicker_by_time(conn: AsyncIOMotorClient, boxID, start_date='201
 async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30'):
     data = await conn[database_name][bremicker_collection_name].find_one({}, projection={"_id": False})
     if not data:
+        print('[BREMICKER] No data in db. Fetching from server')
         response = await fetch_bremicker(conn, start_date, end_date)
         if response:
             return await get_bremicker(conn, start_date, end_date)
