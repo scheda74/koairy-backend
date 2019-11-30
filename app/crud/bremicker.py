@@ -43,14 +43,17 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-09-01', end_d
             return None
     return data
 
-async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=None, end_date=None, start_hour='07:00', end_hour='10:00'):
+async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=None, end_date=None, start_hour=None, end_hour=None):
     try:
         bremicker = await fetch_current_bremicker(conn, start_date, end_date)
     except Exception as e:
         print('[BREMICKER] fetching not successful! %s' % str(e))
     df_traffic = pd.DataFrame(pd.read_json(bremicker))
     df_traffic.index.name = 'time'
-    return df_traffic.between_time(start_hour, end_hour)
+    if start_date is None or end_date is None:
+        return df_traffic.iloc[[-1]]
+    else:
+        return df_traffic.between_time(start_hour, end_hour)
 
 ### NOTE: Fetch data from bremicker
 async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end_date=None):
@@ -88,7 +91,8 @@ async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
     else:
         end_date = datetime.date.today()
-
+    print(start_date)
+    print(end_date)
     params = {
         'key': BREMICKER_API_KEY,
         'from': start_date,

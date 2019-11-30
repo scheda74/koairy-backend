@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+import datetime
 
 from ...crud.bremicker import get_current_bremicker_by_time
 from ...tools.simulation.parse_emission import Parser
@@ -70,3 +71,13 @@ async def compare_traffic(inputs: SinglePredictionInput = example_single_predict
     # return df.to_dict(orient='index')
     df = await processor.aggregate_compare(inputs.boxID, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
     return df.to_dict(orient='index')
+
+@router.get('/bremicker/current')
+async def get_current_bremicker(boxID, db: AsyncIOMotorClient=Depends(get_database)):
+    time = datetime.datetime.today().strftime('%H:%M')
+    df_traffic = await get_current_bremicker_by_time(db, start_hour=time, end_hour=time)
+    if df_traffic is not None:
+        df_traffic = df_traffic[int(boxID)]
+        df_traffic.index = df_traffic.index.strftime("%Y-%m-%d %H:%M")
+        print(df_traffic)
+    return df_traffic.to_json(orient='index')
