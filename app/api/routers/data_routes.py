@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 import datetime
 
-from ...crud.bremicker import get_current_bremicker_by_time
+from ...crud.bremicker import get_current_bremicker_by_time, get_latest_bremicker_by_box_id
+from ...crud.hawa_dawa import fetch_latest_air
 from ...tools.simulation.parse_emission import Parser
 from ...tools.predictor.lin_reg import LinReg
 from ...models.simulation_input import SimulationInput, example_simulation_input
@@ -75,9 +76,22 @@ async def compare_traffic(inputs: SinglePredictionInput = example_single_predict
 @router.get('/bremicker/current')
 async def get_current_bremicker(boxID, db: AsyncIOMotorClient=Depends(get_database)):
     time = datetime.datetime.today().strftime('%H:%M')
-    df_traffic = await get_current_bremicker_by_time(db, start_hour=time, end_hour=time)
+    df_traffic = await get_latest_bremicker_by_box_id(db, boxID=boxID)
     if df_traffic is not None:
-        df_traffic = df_traffic[int(boxID)]
+        # df_traffic = df_traffic[int(boxID)]
         df_traffic.index = df_traffic.index.strftime("%Y-%m-%d %H:%M")
         print(df_traffic)
-    return df_traffic.to_json(orient='index')
+        return df_traffic.to_json(orient='index')
+    else:
+        return {'msg': 'Fetching of Bremicker Data unsuccessful', 'status': 404}
+
+@router.get('/air/current')
+async def get_current_air(boxID, db: AsyncIOMotorClient=Depends(get_database)):
+    # time = datetime.datetime.today().strftime('%H:%M')
+    air = await fetch_latest_air(db)
+    if air is not None:
+        # df_air.index = df_air.index.strftime("%Y-%m-%d %H:%M")
+        # return df_air.to_json(orient='index')
+        return air
+    else:
+        return {'msg': 'Fetching of Bremicker Data unsuccessful'}

@@ -134,19 +134,61 @@ async def fetch_air_traffic(conn: AsyncIOMotorClient, date="2019-01-01"):
         date = date + relativedelta(months=1)
     return result
 
+async def fetch_latest_air(conn: AsyncIOMotorClient):
+    response = await fetch_today_from_hawa_dawa()
+    result = []
+    for feature in response['features']:
+        if (feature['properties']['type'] == 'hawadawa') and feature['properties']['timeValueSeries']:
+            df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in feature['properties']['timeValueSeries'].items()]))
+            frames = []
+            for pollutant in df.columns:
+                df_pol = df[pollutant].apply(pd.Series)[['time', 'value']].dropna()
+                df_pol['time'] = pd.to_datetime(df_pol['time'])
+                df_pol = df_pol.set_index('time')
+                df_pol = df_pol.rename(columns={'value': pollutant})
+                frames.append(df_pol)
+            df = pd.concat(frames, axis=1)
+            df.index = df.index.strftime("%Y-%m-%d %H:%M")
+            lng, lat = feature['geometry']['coordinates']
+            result.append({
+                'id': feature['properties']['internal_id'],
+                'location': {'lat': lat, 'lng': lng},
+                'values': df.to_dict(orient='index')
+            })
+    print(result)
+    return result
+
 async def fetch_data_by_month_from_hawa_dawa(start_date, end_date):
     params = {
         'apikey': HAWA_DAWA_API_KEY,
         'timeseries_startdate': start_date, 
-        'timeseries_enddate': end_date, 
+        'timeseries_enddate': end_date,
         'show_plausible': False,
         'format': 'geojson',
         'missing_value': -999,
         'crs': 'global'
     }
     response = requests.get(HAWA_DAWA_URL, params=params)
-    return response.json()
+    if response:
+        return response.json()
+    else:
+        return {}
 
+async def fetch_today_from_hawa_dawa():
+    today = datetime.date.today().strftime('%Y-%m-%d')
+    params = {
+        'apikey': HAWA_DAWA_API_KEY,
+        'timeseries_startdate': today,
+        'show_plausible': False,
+        'format': 'geojson',
+        'missing_value': -999,
+        'crs': 'global'
+    }
+    response = requests.get(HAWA_DAWA_URL, params=params)
+    if response:
+        return response.json()
+    else:
+        return {}
 
 ### NOTE: UTILITY FUNCTIONS
 def get_month_day_range(date):

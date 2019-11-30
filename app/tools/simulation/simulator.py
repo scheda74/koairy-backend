@@ -74,7 +74,7 @@ class Simulator:
         self.df_traffic = self.df_traffic[[self.boxID]]
         self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 3600)
         max_vehicles = self.df_traffic[self.boxID].max()
-
+        print(self.df_traffic)
         current_step = 0
         while traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()

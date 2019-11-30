@@ -45,15 +45,28 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-09-01', end_d
 
 async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=None, end_date=None, start_hour=None, end_hour=None):
     try:
+        print('[BREMICKER] Start fetching bremicker data...')
         bremicker = await fetch_current_bremicker(conn, start_date, end_date)
     except Exception as e:
         print('[BREMICKER] fetching not successful! %s' % str(e))
+        return None
     df_traffic = pd.DataFrame(pd.read_json(bremicker))
     df_traffic.index.name = 'time'
-    if start_date is None or end_date is None:
-        return df_traffic.iloc[[-1]]
+    print(df_traffic)
+    if start_hour is None or end_hour is None:
+        return df_traffic
     else:
         return df_traffic.between_time(start_hour, end_hour)
+
+async def get_latest_bremicker_by_box_id(conn: AsyncIOMotorClient, boxID=672):
+    df_traffic = await get_current_bremicker_by_time(conn)
+    if df_traffic is not None:
+        df_traffic = df_traffic[int(boxID)]
+        print(df_traffic)
+        # return df_traffic.iloc[[-1]]
+        return df_traffic
+    else:
+        return None
 
 ### NOTE: Fetch data from bremicker
 async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end_date=None):
