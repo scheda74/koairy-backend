@@ -31,41 +31,19 @@ from sklearn.metrics import (mean_absolute_error, mean_squared_error)
 from sklearn.neural_network import MLPRegressor
 from sklearn import preprocessing as pre
 
-from app.tools.predictor.utils.model_preprocessor import ModelPreProcessor
+from ...tools.predictor.utils.model_preprocessor import ModelPreProcessor
+
+# from .predictor import PredictorStrategyAbstract
 
 class LinReg():
     def __init__(self, db: AsyncIOMotorClient, sim_id=None, existing_regr=None):
-        self.db = db
-        self.sim_id = sim_id
+        super().__init__()
+        # self.db = db
+        # self.sim_id = sim_id
         self.existing_regr = existing_regr
         self.raw_emission_columns = ['CO', 'NOx', 'PMx']
         self.real_emission_columns = ['no2', 'pm2.5', 'pm10', 'o3', 'WIND_SPEED', 'WIND_DIR']
         self.mp = ModelPreProcessor(self.db, self.sim_id)
-
-    # async def start_mlp(
-    #         self,
-    #         start_date='2019-08-01',
-    #         end_date='2019-10-20',
-    #         start_hour='7:00',
-    #         end_hour='10:00',
-    #         data=None,
-    #         boxID=672,
-    #         input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
-    #         output_key='pm10'
-    # ):
-    #     input_keys.append(boxID)
-        # df = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
-        # df_brem = await get_bremicker_by_time(self.db, '2019-11-28', '2019-11-28', '07:00', '10:00')
-        # df_brem = await get_bremicker_by_time(
-        #     self.db,
-        #     boxID,
-        #     '2019-11-27',
-        #     '2019-11-28',
-        #     '07:00',
-        #     '10:00'
-        # )
-        # result = await get_current_bremicker_by_time(self.db, start_hour='07:00', end_hour='10:00')
-        # print(result)
 
     async def start_mlp(
         self,
@@ -74,12 +52,12 @@ class LinReg():
         start_hour='7:00',
         end_hour='10:00',
         data=None,
-        boxID=672,
+        box_id=672,
         input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
         output_key='pm10'
     ):
-        input_keys.append(boxID)
-        df = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
+        input_keys.append(box_id)
+        df = await self.mp.aggregate_data(box_id, start_date, end_date, start_hour, end_hour)
         # print('aggregated')
         # print(df)
 
@@ -115,9 +93,6 @@ class LinReg():
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result
 
-
-
-    # async def predict_emission(self, data=None, input_keys=['veh', 'TEMP', 'HUMIDITY', 'PMx'], output_key='pm10'):
     async def start_lin_reg(
         self,
         start_date='2019-08-01', 
@@ -125,13 +100,13 @@ class LinReg():
         start_hour='7:00', 
         end_hour='10:00',
         data=None, 
-        boxID=672, 
+        box_id=672, 
         input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], 
         output_key='pm10'
     ):
-        input_keys.append(boxID)
+        input_keys.append(box_id)
 
-        df_combined = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
+        df_combined = await self.mp.aggregate_data(box_id, start_date, end_date, start_hour, end_hour)
         print(df_combined)
         rows = round(df_combined.shape[0] * 0.8)
         df_train = df_combined.iloc[:rows]
@@ -141,7 +116,7 @@ class LinReg():
 
         if data != None:
             df_test = data
-        
+
         model = LinearRegression()
         model.fit(df_train[input_keys], df_train[output_key])
 
@@ -156,63 +131,3 @@ class LinReg():
         # self.save_df_to_plot(result[[output_key, '%s_lin_predicted' % output_key]], 'new_%s_lin_dist_prediction' % output_key)
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result
-
-
-    # async def start_tbats(
-    #     self,
-    #     start_date='2019-08-01',
-    #     end_date='2019-10-20',
-    #     start_hour='7:00',
-    #     end_hour='10:00',
-    #     data=None,
-    #     boxID=672,
-    #     input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
-    #     output_key='pm10'
-    # ):
-    #     input_keys.append(boxID)
-    #     df = await self.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
-    #     # print('aggregated')
-    #     # print(df)
-    #
-    #     rows = round(df.shape[0] * 0.8)
-    #     df_train = df.iloc[:rows]
-    #     df_test = df.iloc[rows:]
-    #     # scaler = pre.StandardScaler()
-    #     scaler = pre.MinMaxScaler(feature_range=(0, 100))
-    #     df_train[['pm10']] = scaler.fit_transform(df_train[['pm10']])
-    #     print(df_train)
-        # test_scaled = scaler.fit_transform(df_test[input_keys])
-        #[val for val in np.arange(4, 320, 80)]
-        
-        # periods = [val for val in np.arange(4, 256, 4)]
-        # print(periods)
-        # estimator = TBATS(seasonal_periods=periods)
-        
-        # # fitted_model = estimator.fit(df_train[['temp', 'hum', 'WIND_SPEED', 'WIND_DIR', 'pm10']])
-        # fitted_model = estimator.fit(df_train[['pm10']])
-        # y_forecasted = fitted_model.forecast(steps=64)
-        # print(fitted_model.summary())
-
-        # # Time series analysis
-        # print(fitted_model.y_hat) # in sample prediction
-        # print(fitted_model.resid) # in sample residuals
-        # print(fitted_model.aic)
-
-        # print(fitted_model.params.alpha)
-        # print(fitted_model.params.beta)
-        # print(fitted_model.params.x0)
-        # print(fitted_model.params.components.use_box_cox)
-        # print(fitted_model.params.components.seasonal_harmonics)
-        # print(y_forecasted)
-        # # print(df_test)
-        # df_test['predicted'] = y_forecasted
-        # print(df_test)
-        # self.save_df_to_plot(df_test[['pm10', 'predicted']], 'tbats_pm10_forecast')
-    # convert an array of values into a dataset matrix
-
-    # def save_df_to_plot(self, df, filename):
-    #     if not df.empty:
-    #         df.plot(figsize=(18, 5))
-    #         plt.savefig(PLOT_BASEDIR + '/' + filename)
-    #     else:
-    #         print('[PLOT] Error saving plot. Dataframe empty!')

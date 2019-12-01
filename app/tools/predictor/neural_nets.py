@@ -36,13 +36,13 @@ class NeuralNet():
         start_hour='7:00', 
         end_hour='10:00', 
         data=None, 
-        boxID=672, 
+        box_id=672, 
         input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], 
         output_key='pm10'
     ):
-        boxID = int(boxID)
-        input_keys.append(boxID)
-        df = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
+        box_id = int(box_id)
+        input_keys.append(box_id)
+        df = await self.mp.aggregate_data(box_id, start_date, end_date, start_hour, end_hour)
         data = df.copy()
         data.index = data.index.strftime('%Y-%m-%d %H:%M')
 
@@ -143,13 +143,13 @@ class NeuralNet():
     #     start_hour='7:00',
     #     end_hour='10:00',
     #     data=None,
-    #     boxID=672,
+    #     box_id=672,
     #     input_keys=['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
     #     output_key='pm10'
     # ):
     #     # load dataset
-    #     input_keys.append(boxID)
-    #     dataset = await self.mp.aggregate_data(boxID, start_date, end_date, start_hour, end_hour)
+    #     input_keys.append(box_id)
+    #     dataset = await self.mp.aggregate_data(box_id, start_date, end_date, start_hour, end_hour)
     #     values = dataset.values
     #
     #     # integer encode direction

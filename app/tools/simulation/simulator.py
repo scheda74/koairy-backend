@@ -3,9 +3,10 @@ import sys
 import datetime
 from random import randrange, choice, choices
 import pandas as pd
-from .single_preprocessor import SingleSimulationPreProcessor
-from ...core.config import EMISSION_OUTPUT_BASE, SUMO_COMMANDLINE, SUMO_GUI, TRAFFIC_INPUT_BASEDIR
+from ...core.config import EMISSION_OUTPUT_BASE, SUMO_COMMANDLINE, SUMO_GUI, TRAFFIC_INPUT_BASEDIR, SUMO_CFG
 from ...crud.emissions import (get_caqi_emissions_for_sim, get_raw_emissions_from_sim)
+from .preprocessor import SimulationPreProcessor
+from .parse_emission import Parser
 
 # export SUMO_HOME="/usr/local/opt/sumo/share/sumo"
 
@@ -17,28 +18,32 @@ else:
 
 import traci
 
+
 class Simulator:
-    def __init__(self, db, cfg_filepath, sim_id, veh_dist, timesteps, df_traffic=None, boxID=672):
+    def __init__(self, db, inputs, sim_id, cfg_filepath=None, df_traffic=None):
         self.db = db
         self.sim_id = sim_id
-        self.cfg_filepath = cfg_filepath
-        self.veh_dist = veh_dist
-        self.timesteps = timesteps
-        self.boxID = boxID
+        self.inputs = inputs
+        self.veh_dist = inputs.vehicleDistribution
+        self.timesteps = inputs.timesteps
+        self.vehicleNumber = inputs.vehicleNumber
+        self.box_id = inputs.box_id
+
         self.tripinfo_filepath = EMISSION_OUTPUT_BASE + 'tripinfo_%s.xml' % self.sim_id
         self.fcdoutput_filepath = EMISSION_OUTPUT_BASE + 'fcdoutput_%s.xml' % self.sim_id
         self.emission_output_filepath = EMISSION_OUTPUT_BASE + "emission_output_%s.xml" % self.sim_id
-        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.boxID
-        self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.boxID
+        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.box_id
+        self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.box_id
         self.df_traffic = df_traffic
 
+        if cfg_filepath is not None:
+            self.cfg_filepath = cfg_filepath
+        else:
+            self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
 
     async def run(self):
-        # step = 0
         while traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
-            # print(step)
-            # step += 1
         traci.close()
         sys.stdout.flush()
         return
@@ -48,7 +53,7 @@ class Simulator:
         raw = await get_raw_emissions_from_sim(self.db, self.sim_id)
         if raw is not None:
             print("[PARSER] Simulation has already been run. Fetching Data from DB...")
-            return
+            return raw
         else: 
             sumoBinary = SUMO_COMMANDLINE
             sumoCMD = [
@@ -64,17 +69,19 @@ class Simulator:
                 await self.run()
             else:
                 print("[SIMULATOR] Same simulation already exists. Parsing old file...")
-            return
-
+            print("Parsing results...")
+            parser = Parser(self.db, self.sim_id)
+            df = await parser.parse_emissions()
+            return df.reset_index().to_json(orient='index')
 
     async def run_update(self):
         emission_classes = list(self.veh_dist.keys())
         emission_weights = list(self.veh_dist.values())
         detector_steps = [step * 3600 for step in range(0, int(self.timesteps / 3600) + 1)]
         self.df_traffic = self.df_traffic.reset_index()
-        self.df_traffic = self.df_traffic[[self.boxID]]
+        self.df_traffic = self.df_traffic[[self.box_id]]
         self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 3600)
-        max_vehicles = self.df_traffic[self.boxID].max()
+        max_vehicles = self.df_traffic[self.box_id].max()
         print(self.df_traffic)
         current_step = 0
         while traci.simulation.getMinExpectedNumber() > 0:
@@ -82,7 +89,7 @@ class Simulator:
             if current_step in detector_steps:
                 step = detector_steps.pop(0)
 
-                vehicle_threshold = self.df_traffic.loc[step][self.boxID]
+                vehicle_threshold = self.df_traffic.loc[step][self.box_id]
                 det_veh_number = traci.inductionloop.getLastStepVehicleNumber("det_0")
 
                 needed_vehicles = det_veh_number - vehicle_threshold
@@ -124,9 +131,17 @@ class Simulator:
         raw = await get_raw_emissions_from_sim(self.db, self.sim_id)
         if raw is not None:
             print("[PARSER] Simulation has already been run. Fetching Data from DB...")
-            return
+            return raw
         else:
-            await preprocess_simulation_input()
+            print("Starting PreProcessor...")
+            processor = SimulationPreProcessor(
+                db=self.db,
+                sim_id=self.sim_id,
+                inputs=self.inputs,
+                df_traffic=self.df_traffic
+            )
+            cfg_filepath = await processor.preprocess_simulation_input()
+            await processor.preprocess_simulation_input()
             if self.df_traffic is None:
                 self.df_traffic = 400
             sumoBinary = SUMO_COMMANDLINE
@@ -145,4 +160,7 @@ class Simulator:
                 await self.run_update()
             else:
                 print("[SIMULATOR] Same simulation already exists. Parsing old file...")
-            return
+            print("Parsing results...")
+            parser = Parser(self.db, self.sim_id, self.box_id)
+            df = await parser.parse_emissions()
+            return df.reset_index().to_json(orient='index')

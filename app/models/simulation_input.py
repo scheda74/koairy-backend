@@ -2,14 +2,17 @@ from fastapi import FastAPI, Body
 from typing import Dict
 from pydantic import BaseModel, Schema
 
+
 class SimulationInput(BaseModel):
-    weatherScenario: int = Schema(0, description='Choose between different weather scenarios')
     vehicleDistribution: Dict[str, float] = Schema(..., description='Distribution of emission classes')
     srcWeights: Dict[str, float] = Schema(..., description='Percentage of how many vehicles (agents) start from an area')
     dstWeights: Dict[str, float] = Schema(..., description='Percentage of how many vehicles (agents) end in an area')
-    vehicleNumber: int = 9500
-    boxID: int = Schema(672, description="Specify bremicker box id")
+    vehicleNumber: int = Schema(None, description="Specify number of vehicles")
+    box_id: int = Schema(672, description="Specify bremicker box id")
     timesteps: int = Schema(10800, description="Seconds of simulation, default 10800s => 3 hours")
+    start_hour: str = Schema('07:00', description='Select sensor location')
+    end_hour: str = Schema('10:00', description='Select sensor location')
+
 
 example_simulation_input = Body(
     ...,
@@ -52,8 +55,10 @@ example_simulation_input = Body(
             'kirchheim_residential': 0.05,
             'unassigned_edges': 0.05
         },
-        'vehicleNumber': 9500,
+        'vehicleNumber': None,
         'timesteps': 10800,
-        'boxID': 672
+        'box_id': 672,
+        'start_hour': '07:00',
+        'end_hour': '10:00'
     }
 )

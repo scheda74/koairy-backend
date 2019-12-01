@@ -30,14 +30,15 @@ else:
 
 import sumolib
 
-class Parser():
-    def __init__(self, db: AsyncIOMotorClient, simulation_id, boxID=None):
+
+class Parser:
+    def __init__(self, db: AsyncIOMotorClient, simulation_id, box_id=None):
         self.db = db
         self.sim_id = simulation_id
         self.sim_output_path = EMISSION_OUTPUT_BASE + "emission_output_%s.xml" % self.sim_id
 
-        new_net_path = NET_BASEDIR + "%s.net.xml" % boxID
-        if not os.path.exists(new_net_path) or boxID is None:
+        new_net_path = NET_BASEDIR + "%s.net.xml" % box_id
+        if not os.path.exists(new_net_path) or box_id is None:
             new_net_path = DEFAULT_NET_INPUT
         self.net_filepath = new_net_path
 
@@ -55,10 +56,11 @@ class Parser():
                 del elem.getparent()[0]
         del context
 
-    def parse_emissions(self, filepath=None):
+    async def parse_emissions(self, filepath=None):
         if filepath == None:
             filepath = self.sim_output_path
         if not os.path.exists(filepath):
+            print("Apparently simulation hasn't been run. Start it now...")
             return None
         context = etree.iterparse(filepath, tag="vehicle")
 
@@ -80,7 +82,11 @@ class Parser():
         # df[entries] = df[entries].resample('60s', how='sum')
         # df = df.groupby(['time', 'lat', 'lng'])[entries].sum()
         # df = df.reset_index()
-        return df.groupby([df.time // 60, 'lat', 'lng'])[entries].sum()
+        df = df.groupby([df.time // 60, 'lat', 'lng'])[entries].sum()
+
+        raw_emissions = df.reset_index().to_json(orient='index')
+        await insert_raw_emissions(self.db, self.sim_id, raw_emissions)
+        return df
 
     async def get_caqi_data(self):
         caqi = await get_caqi_emissions_for_sim(self.db, self.sim_id)
@@ -103,7 +109,7 @@ class Parser():
         else: 
             print("[PARSER] parsing XML emission outputs from traffic simulation")
             timer_start = timer()
-            emissions = self.parse_emissions(self.sim_output_path)
+            emissions = await self.parse_emissions(self.sim_output_path)
             seconds = timer() - timer_start
             # print(emissions)
             print("[etree] Finished parsing XML in %s seconds" % seconds)

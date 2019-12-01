@@ -31,7 +31,7 @@ from ..core.config import (
 #         return await fetch_air_traffic(conn, '2019-01-01')
 #     return await format_to_df(result)
 
-async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', boxID=672):
+async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', box_id=672):
     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
     result = []
@@ -54,16 +54,16 @@ async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01
     if len(result) == 0:
         print('[HAWADAWA] No data in db. Fetching from server')
         await fetch_air_traffic(conn, '2019-01-01')
-        return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), boxID=boxID)
+        return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), box_id=box_id)
     print('hawa dawa result')
     print(result)
-    df = await format_to_df(result, boxID)
+    df = await format_to_df(result, box_id)
     df = df.reset_index()
     mask = (df['time'] > start_date) & (df['time'] <= end_date)
     df = df.loc[mask].set_index('time')
     return df.between_time(start_hour, end_hour)
 
-async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', boxID=672):
+async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', box_id=672):
     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
     result = []
@@ -86,22 +86,22 @@ async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='20
     if len(result) == 0:
         print('[HAWADAWA] No data in db. Fetching from server')
         await fetch_air_traffic(conn, '2019-01-01')
-        return await get_current_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), boxID=boxID)
+        return await get_current_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), box_id=box_id)
     print('hawa dawa result')
     print(result)
-    df = await format_to_df(result, boxID)
+    df = await format_to_df(result, box_id)
     df = df.reset_index()
     mask = (df['time'] > start_date) & (df['time'] <= end_date)
     df = df.loc[mask].set_index('time')
     return df.between_time(start_hour, end_hour)
 
-async def format_to_df(response, boxID=672):
+async def format_to_df(response, box_id=672):
     months = []
     for elem in response:
         data = json.loads(elem['data'])
         for feature in data['features']:
             if (feature['properties']['type'] == 'hawadawa') and feature['properties']['timeValueSeries']:
-                if feature['properties']['internal_id'] == bremicker_boxes[boxID]['airSensor']:
+                if feature['properties']['internal_id'] == bremicker_boxes[box_id]['airSensor']:
                     df = pd.DataFrame(dict([ (k, pd.Series(v)) for k, v in feature['properties']['timeValueSeries'].items() ]))
                     frames = []
                     for pollutant in df.columns:

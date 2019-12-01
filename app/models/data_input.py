@@ -7,7 +7,7 @@ class DataInput(SimulationInput):
     end_date: str = Schema(..., description='Choose an end date')
     start_hour: str = Schema(..., description='Hour when to start')
     end_hour: str = Schema(..., description='Hour when to end')
-    boxID: int = Schema(..., description='Number of Bremicker Box used for traffic data')
+    box_id: int = Schema(..., description='Number of Bremicker Box used for traffic data')
 
 example_data_input = Body(
     ...,
@@ -16,6 +16,6 @@ example_data_input = Body(
         "end_date": '2019-10-20',
         "start_hour": '0:00',
         "end_hour": '23:00',
-        "boxID": 672
+        "box_id": 672
     }
 )
