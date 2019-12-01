@@ -22,10 +22,12 @@ class Predictor(object):
         self,
         db,
         prediction_params: PredictionInput = example_prediction_input,
-        sim_id=None
+        sim_id=None,
+        df_traffic=None
     ):  
         self.db = db
         self.sim_id = sim_id
+        self.df_traffic=df_traffic
         self.predictionModel = prediction_params.predictionModel
         self.prediction_params = prediction_params
     
@@ -34,26 +36,30 @@ class Predictor(object):
             return await LinearRegressionStrategy(
                 self.prediction_params,
                 self.db,
-                self.sim_id
+                self.sim_id,
+                self.df_traffic
             ).predict_emissions()
         elif self.predictionModel == 'lstm':
             return await LongShortTermMemoryRecurrentNeuralNetworkStrategy(
                 self.prediction_params,
                 self.db,
-                self.sim_id
+                self.sim_id,
+                self.df_traffic
             ).predict_emissions()
         elif self.predictionModel == 'mlp':
             return await MLPRegressorStrategy(
                 self.prediction_params,
                 self.db,
-                self.sim_id
+                self.sim_id,
+                self.df_traffic
             ).predict_emissions()
         elif self.predictionModel == 'cnn':
             print('cnn not yet specified, lin reg started')
             return await LinearRegressionStrategy(
                 self.prediction_params,
                 self.db,
-                self.sim_id
+                self.sim_id,
+                self.df_traffic
             ).predict_emissions()
         else:
             print('Specified strategy not found!')
@@ -66,10 +72,12 @@ class PredictorStrategyAbstract(object):
         self, 
         prediction_params,
         db: AsyncIOMotorClient=Depends(get_database),
-        sim_id=None
+        sim_id=None,
+        df_traffic=None
     ):
         self.db = db
         self.sim_id = sim_id
+        self.df_traffic=df_traffic
         self.inputs = prediction_params
         self.box_id = prediction_params.box_id
         self.input_keys = prediction_params.input_keys
@@ -88,7 +96,7 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
     async def predict_emissions(self):
         """Start Linear Regression Model Training and Prediction"""
         self.inputs.input_keys.append(self.inputs.box_id)
-        mp = ModelPreProcessor(db=self.db, inputs=self.inputs, sim_id=self.sim_id)
+        mp = ModelPreProcessor(db=self.db, inputs=self.inputs, sim_id=self.sim_id, df_traffic=self.df_traffic)
         df_combined = await mp.aggregate_data(
             self.box_id,
             self.start_date,

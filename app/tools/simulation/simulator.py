@@ -140,10 +140,9 @@ class Simulator:
                 inputs=self.inputs,
                 df_traffic=self.df_traffic
             )
-            cfg_filepath = await processor.preprocess_simulation_input()
-            await processor.preprocess_simulation_input()
-            if self.df_traffic is None:
-                self.df_traffic = 400
+            # cfg_filepath = await processor.preprocess_simulation_input()
+            self.cfg_filepath = await processor.preprocess_simulation_input()
+
             sumoBinary = SUMO_COMMANDLINE
             # sumoBinary = SUMO_GUI
             sumoCMD = [

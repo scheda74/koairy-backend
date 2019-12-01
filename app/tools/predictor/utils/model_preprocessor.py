@@ -8,6 +8,7 @@ from ....crud.emissions import (
     get_aggregated_data_from_sim,
     insert_aggregated_data
 )
+from ...simulation.simulator import Simulator
 from .bremicker_boxes import bremicker_boxes
 from ...simulation.parse_emission import Parser
 from ....models.prediction_input import PredictionInput
@@ -20,9 +21,14 @@ from .weather import fetch_weather_data
 
 
 class ModelPreProcessor():
-    def __init__(self, inputs: PredictionInput, db: AsyncIOMotorClient=Depends(get_database), sim_id=None):
+    def __init__(self,
+                inputs: PredictionInput,
+                db: AsyncIOMotorClient=Depends(get_database),
+                sim_id=None,
+                df_traffic=None):
         self.db = db
         self.sim_id = sim_id
+        self.inputs = inputs
         self.box_id = inputs.box_id
         self.input_keys = inputs.input_keys
         self.output_key = inputs.output_key
@@ -30,6 +36,7 @@ class ModelPreProcessor():
         self.end_date = inputs.end_date
         self.start_hour = inputs.start_hour
         self.end_hour = inputs.end_hour
+        self.df_traffic = df_traffic
 
         self.raw_emission_columns = ['CO', 'NOx', 'PMx']
 
@@ -75,11 +82,11 @@ class ModelPreProcessor():
 
         print("[MODEL PREPROCESSOR] Aggregated data for simulation not found! Fetching from sources...")
         # df_air = await self.fetch_air_and_traffic(box_id, start_date, end_date, start_hour, end_hour)
-        df_air = await self.fetch_air_and_traffic()
+        df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
 
         df_air.index.name = 'time'
         
-        df_sim = await fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
+        df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
         df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
         # print(df_sim)
 
@@ -91,27 +98,27 @@ class ModelPreProcessor():
         pmx_var = df_pmx.var(axis=0)
         pmx_std = df_pmx.std(axis=0)
         pmx_mean = df_pmx.mean(axis=0)
-        print('Var: \n', nox_var, pmx_var)
-        print('Std: \n', nox_std, pmx_std)
-        print('Mean: \n', nox_mean, pmx_mean)
-        # print(df_air.shape)
-        # ratio = ((nox_std / nox_mean) + (pmx_std / pmx_mean)) / 2
+        print('Var NOx: %s -- Var PMx: %s \n', nox_var, pmx_var)
+        print('Std NOx: %s -- Std PMx: %s \n', nox_std, pmx_std)
+        print('Mean NOx: %s -- Mean PMx: %s \n', nox_mean, pmx_mean)
+
         sim_rows = df_sim.shape[0]
         air_rows = df_air.shape[0]
         rows_needed = (air_rows / (sim_rows / 60))
-        ratio_nox = 1 - (nox_std / nox_mean)
-        ratio_pmx = 1 - (pmx_std / pmx_mean)
+        # ratio_nox = 1 - (nox_std / nox_mean)
+        # ratio_pmx = 1 - (pmx_std / pmx_mean)
         
         print("%s rows needed" % rows_needed)
-        print("%s ratio_nox" % ratio_nox)
-        print("%s ratio_pmx" % ratio_pmx)
+        # print("%s ratio_nox" % ratio_nox)
+        # print("%s ratio_pmx" % ratio_pmx)
         
-        nox_frames = [df_sim[['NOx']] * val for val in np.arange(1 - ratio_nox, 1 + ratio_nox, (ratio_nox * 2) / rows_needed)]
+        nox_frames = [df_sim[['NOx']] * val for val in np.arange(0.8, 1.2, 0.4 / rows_needed)]
         df_nox = pd.concat(nox_frames, axis=0, ignore_index=True)
         df_nox = df_nox.groupby(df_nox.index // 60).sum()
         # self.save_df_to_plot(df_nox, 'nox_simulated_oversampled')
 
-        pmx_frames = [df_sim[['PMx']] * val for val in np.arange(1 - ratio_pmx, 1 + ratio_pmx, (ratio_pmx * 2) / rows_needed)]
+        # pmx_frames = [df_sim[['PMx']] * val for val in np.arange(1 - ratio_pmx, 1 + ratio_pmx, (ratio_pmx * 2) / rows_needed)]
+        pmx_frames = [df_sim[['PMx']] * val for val in np.arange(0.8, 1.2, 0.4 / rows_needed)]
         df_pmx = pd.concat(pmx_frames, axis=0, ignore_index=True)
         df_pmx = df_pmx.groupby(df_pmx.index // 60).sum()
         # self.save_df_to_plot(df_pmx, 'pmx_simulated_oversampled')
@@ -133,17 +140,17 @@ class ModelPreProcessor():
 
     async def aggregate_real_data(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
         # box_id=int(box_id)
-        df_air = await self.fetch_air_and_traffic(box_id, start_date, end_date, start_hour, end_hour)
+        df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
         df_air.index.name = 'time'
 
         return df_air
 
     async def aggregate_compare(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
         # box_id=int(box_id)
-        df_air = await self.fetch_air_and_traffic(box_id, start_date, end_date, start_hour, end_hour)
+        df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
         df_air.index.name = 'time'
         print(df_air[['no2', 'pm10']])
-        df_sim = await fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
+        df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
         df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
 
         # print(df_sim)
@@ -152,7 +159,7 @@ class ModelPreProcessor():
         return df_sim
         # return [df_air, df_sim]
 
-    async def fetch_air_and_traffic(self, box_id, start_date='2019-08-01', end_date='2019-11-01', start_hour='7:00', end_hour='10:00'):
+    async def fetch_air_and_traffic(self, start_date='2019-08-01', end_date='2019-11-01', start_hour='7:00', end_hour='10:00'):
         # NOTE: Get real weather data and format it accordingly. Here we'll look at 2019 from 7:00 to 10:00
         df_traffic = await get_bremicker_by_time(
             self.db,
@@ -190,7 +197,19 @@ class ModelPreProcessor():
             parser = Parser(self.db, self.sim_id)
             raw_emissions = await parser.parse_emissions()
             if raw_emissions is None:
-                raise Exception('Parsing of raw emissions unsuccessful!')
+                simulator = Simulator(
+                    self.db,
+                    self.sim_id,
+                    self.inputs,
+                    df_traffic=self.df_traffic
+                )
+                if self.df_traffic is not None:
+                    print("Starting SUMO...")
+                    await simulator.start_single()
+                    raw_emissions = get_raw_emissions_from_sim(self.db, self.sim_id)
+                else:
+                    print("Starting SUMO...")
+                    await simulator.start()
         df = pd.DataFrame(pd.read_json(raw_emissions["emissions"], orient='index'))
         mask = (round(df['lat'], 3) == lat) & (round(df['lng'], 3) == lng)
         df = df.loc[mask]

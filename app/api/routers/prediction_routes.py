@@ -6,6 +6,7 @@ from ...models.prediction_input import (
     # SinglePredictionInput,
     # example_single_prediction_input
 )
+from ...crud.bremicker import get_current_bremicker_by_time
 from ...db.mongodb import AsyncIOMotorClient, get_database
 from .utils import (generate_id, generate_single_id)
 
@@ -29,13 +30,17 @@ async def start_single_prediction(inputs: PredictionInput = example_prediction_i
     """
     Training and prediction using a Long-Short-Term-Memory Recurrent Neural Network
     """
+    df_traffic = None
+    if inputs.vehicleNumber is None:
+        df_traffic = await get_current_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
+        inputs.vehicleNumber = df_traffic[inputs.box_id].sum() if df_traffic is not None else 1000
     sim_id = generate_single_id(inputs)
-    try:
-        df = await Predictor(db, inputs, sim_id).predict_emissions()
-    except Exception as e:
-        # return {'msg': str(e), 'status': 500}
-        raise HTTPException(status_code=500, detail=str(e))
-    else:
-        return df.to_json(orient='index')
+    # try:
+    df = await Predictor(db, inputs, sim_id, df_traffic=df_traffic).predict_emissions()
+    # except Exception as e:
+    #     print(str(e))
+    #     raise HTTPException(status_code=500, detail=str(e))
+    # else:
+    return df.to_json(orient='index')
 
 # https://machinelearningmastery.com/time-series-prediction-lstm-recurrent-neural-networks-python-keras/

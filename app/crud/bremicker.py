@@ -52,13 +52,16 @@ async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=Non
     except Exception as e:
         print('[BREMICKER] fetching not successful! %s' % str(e))
         return None
-    df_traffic = pd.DataFrame(pd.read_json(bremicker))
-    df_traffic.index.name = 'time'
-    print(df_traffic)
-    if start_hour is None or end_hour is None:
-        return df_traffic
+    if bremicker is not None:
+        df_traffic = pd.DataFrame(pd.read_json(bremicker))
+        df_traffic.index.name = 'time'
+        print(df_traffic)
+        if start_hour is None or end_hour is None:
+            return df_traffic
+        else:
+            return df_traffic.between_time(start_hour, end_hour)
     else:
-        return df_traffic.between_time(start_hour, end_hour)
+        return None
 
 
 async def get_latest_bremicker_by_box_id(conn: AsyncIOMotorClient, box_id=672):
@@ -74,12 +77,8 @@ async def get_latest_bremicker_by_box_id(conn: AsyncIOMotorClient, box_id=672):
 
 ### NOTE: Fetch data from bremicker
 async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end_date=None):
-    print('[MongoDB] No bremicker data found. Fetching from server...')
-    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
-    if end_date:
-        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
-    else:
-        end_date = datetime.date.today()
+    if end_date is None:
+        end_date = datetime.date.today().strftime('%Y-%m-%d')
     params = {
         'key': BREMICKER_API_KEY,
         'from': start_date, 
@@ -100,16 +99,8 @@ async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end
 
 
 async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None):
-    print('[MongoDB] No bremicker data found. Fetching from server...')
-    if start_date:
-        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
-    else:
-        start_date = datetime.date.today()
-
-    if end_date:
-        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
-    else:
-        end_date = datetime.date.today()
+    if end_date is None:
+        end_date = datetime.date.today().strftime('%Y-%m-%d')
     print(start_date)
     print(end_date)
     params = {
@@ -130,30 +121,23 @@ async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end
     else:
         return response
 
+
 async def format_bremicker(data):
     df = pd.DataFrame(data)
     df['time'] = df[['date', 'time']].apply(lambda x: pd.to_datetime(' '.join(x)), axis=1)
-    df = df[['time', 'box_id', 'averageVelocity', 'entryVelocity']]
-    df = df.groupby(['box_id', pd.Grouper(key='time', freq='H')]).size()
+    df = df[['time', 'boxID', 'averageVelocity', 'entryVelocity']]
+    df = df.groupby(['boxID', pd.Grouper(key='time', freq='H')]).size()
     df = df.reset_index().rename(columns={0: 'veh'})
     df['time'] = df['time'].astype(str)
-    df = df.groupby('box_id')[['time', 'veh']].apply(lambda x: dict(x.values)).to_json()
-    # times = df['time']
-    # df = df.groupby(['box_id', times.dt.date, times.dt.hour])[['averageVelocity', 'entryVelocity']].mean()
-    # [['averageVelocity', 'entryVelocity']].mean()
-    # df['veh'] = df.resample('H').transform('count')
-    # df = df.groupby(by=df['time'].dt.hour)[['averageVelocity', 'entryVelocity']].mean()
-    # df.groupby(['box_id'])[['averageVelocity', 'entryVelocity']]
-    # df = df[['date', 'time']]
+    df = df.groupby('boxID')[['time', 'veh']].apply(lambda x: dict(x.values)).to_json()
     print(df)
     return df
-    # for measure in data:
-    #     time = pd.to_datetime(measure['date'] + measure['time'])
+
 
 async def insert_bremicker(conn: AsyncIOMotorClient, date, data: dict):
     print("[MONGODB] Saving Bremicker data")
     raw_doc = {}
-    raw_doc["measure_date"] = date.strftime('%Y-%m-%d')
+    raw_doc["measure_date"] = date
     raw_doc["data"] = data
     await conn[database_name][bremicker_collection_name].insert_one(raw_doc)
     print("[MONGODB] Bremicker data successfully saved!")

@@ -29,7 +29,7 @@ async def start_simulation(inputs: SimulationInput = example_simulation_input, d
     cfg_filepath = await processor.preprocess_simulation_input()
 
     print("Starting SUMO...")
-    simulator = Simulator(db, cfg_filepath, sim_id, veh_dist=inputs.vehicleDistribution, timesteps=inputs.timesteps)
+    simulator = Simulator(db, inputs, cfg_filepath, sim_id)
     await simulator.start()
     
     print("Parsing results...")

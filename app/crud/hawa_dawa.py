@@ -19,81 +19,69 @@ from ..core.config import (
     HAWA_DAWA_API_KEY
 )
 
-# async def get_all_hawa_dawa(conn: AsyncIOMotorClient):
+
+async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-08-01', end_date='2019-11-30', start_hour='07:00', end_hour='10:00', box_id=672):
+    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+    result = []
+    async for data in conn[database_name][air_hawa_collection_name].find({}, projection={"_id": False}):
+        if data is not None:
+            measure_date = datetime.datetime.strptime(data['measure_date'], '%Y-%m-%d').date()
+            if start_date <= measure_date <= end_date:
+                result.append(data)
+        else:
+            print('[HAWADAWA] No data in db in loop. Fetching from server')
+            response = await fetch_air_traffic(conn)
+            if response is not None:
+                # return await get_hawa_dawa_by_time(conn, start_date, end_date, start_hour, end_hour)
+                result = response
+                break
+            else:
+                print('[HAWA DAWA] error while fetching')
+                return None
+    # print(result)
+    if len(result) == 0:
+        print('[HAWADAWA] No data in db. Fetching from server - initial')
+        result = await fetch_air_traffic(conn, '2019-01-01')
+        # return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), box_id=box_id)
+    df = await format_to_df(result, box_id)
+    df = df.reset_index()
+    mask = (df['time'] > start_date) & (df['time'] <= end_date)
+    df = df.loc[mask].set_index('time')
+    print(df)
+    return df.between_time(start_hour, end_hour)
+
+# async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', box_id=672):
+#     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+#     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
 #     result = []
 #     async for data in conn[database_name][air_hawa_collection_name].find({}, projection={"_id": False}):
 #         if data:
-#             result.append(data)
+#             measure_date = datetime.datetime.strptime(data['measure_date'], '%Y-%m-%d').date()
+#             if measure_date >= start_date and measure_date <= end_date:
+#                 result.append(data)
 #         else:
-#             break    
-    
-#     if len(result) == 0: 
-#         return await fetch_air_traffic(conn, '2019-01-01')
-#     return await format_to_df(result)
-
-async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', box_id=672):
-    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
-    end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
-    result = []
-    async for data in conn[database_name][air_hawa_collection_name].find({}, projection={"_id": False}):
-        if data:
-            measure_date = datetime.datetime.strptime(data['measure_date'], '%Y-%m-%d').date()
-            if measure_date >= start_date and measure_date <= end_date:
-                result.append(data)
-        else:
-            print('[HAWADAWA] No data in db in loop. Fetching from server')
-            response = await fetch_air_traffic(conn)
-            if response:
-                # return await get_hawa_dawa_by_time(conn, start_date, end_date, start_hour, end_hour)
-                result = response
-                break
-            else:
-                print('[HAWA DAWA] error while fetching')
-                return None
-
-    if len(result) == 0:
-        print('[HAWADAWA] No data in db. Fetching from server')
-        await fetch_air_traffic(conn, '2019-01-01')
-        return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), box_id=box_id)
-    print('hawa dawa result')
-    print(result)
-    df = await format_to_df(result, box_id)
-    df = df.reset_index()
-    mask = (df['time'] > start_date) & (df['time'] <= end_date)
-    df = df.loc[mask].set_index('time')
-    return df.between_time(start_hour, end_hour)
-
-async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', box_id=672):
-    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
-    end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
-    result = []
-    async for data in conn[database_name][air_hawa_collection_name].find({}, projection={"_id": False}):
-        if data:
-            measure_date = datetime.datetime.strptime(data['measure_date'], '%Y-%m-%d').date()
-            if measure_date >= start_date and measure_date <= end_date:
-                result.append(data)
-        else:
-            print('[HAWADAWA] No data in db in loop. Fetching from server')
-            response = await fetch_air_traffic(conn)
-            if response:
-                # return await get_hawa_dawa_by_time(conn, start_date, end_date, start_hour, end_hour)
-                result = response
-                break
-            else:
-                print('[HAWA DAWA] error while fetching')
-                return None
-
-    if len(result) == 0:
-        print('[HAWADAWA] No data in db. Fetching from server')
-        await fetch_air_traffic(conn, '2019-01-01')
-        return await get_current_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), box_id=box_id)
-    print('hawa dawa result')
-    print(result)
-    df = await format_to_df(result, box_id)
-    df = df.reset_index()
-    mask = (df['time'] > start_date) & (df['time'] <= end_date)
-    df = df.loc[mask].set_index('time')
-    return df.between_time(start_hour, end_hour)
+#             print('[HAWADAWA] No data in db in loop. Fetching from server')
+#             response = await fetch_air_traffic(conn)
+#             if response:
+#                 # return await get_hawa_dawa_by_time(conn, start_date, end_date, start_hour, end_hour)
+#                 result = response
+#                 break
+#             else:
+#                 print('[HAWA DAWA] error while fetching')
+#                 return None
+#
+#     if len(result) == 0:
+#         print('[HAWADAWA] No data in db. Fetching from server')
+#         await fetch_air_traffic(conn, '2019-01-01')
+#         # return await get_current_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), box_id=box_id)
+#     print('hawa dawa result')
+#     print(result)
+#     df = await format_to_df(result, box_id)
+#     df = df.reset_index()
+#     mask = (df['time'] > start_date) & (df['time'] <= end_date)
+#     df = df.loc[mask].set_index('time')
+#     return df.between_time(start_hour, end_hour)
 
 async def format_to_df(response, box_id=672):
     months = []
@@ -101,7 +89,9 @@ async def format_to_df(response, box_id=672):
         data = json.loads(elem['data'])
         for feature in data['features']:
             if (feature['properties']['type'] == 'hawadawa') and feature['properties']['timeValueSeries']:
-                if feature['properties']['internal_id'] == bremicker_boxes[box_id]['airSensor']:
+                # print(bremicker_boxes[box_id]['airSensor'])
+                # print(feature['properties']['internal_id'])
+                if int(feature['properties']['internal_id']) == int(bremicker_boxes[box_id]['airSensor']):
                     df = pd.DataFrame(dict([ (k, pd.Series(v)) for k, v in feature['properties']['timeValueSeries'].items() ]))
                     frames = []
                     for pollutant in df.columns:
@@ -115,12 +105,13 @@ async def format_to_df(response, box_id=672):
     # print(result)
     return result
 
+
 async def insert_air_traffic(conn: AsyncIOMotorClient, date, data: dict):
     print("[MONGODB] Saving HawaDawas data of month %s " % str(date))
-    raw_doc = {}
-    raw_doc["measure_date"] = date.strftime('%Y-%m-%d')
-    raw_doc["data"] = json.dumps(data)
+    raw_doc = {"measure_date": date.strftime('%Y-%m-%d'), "data": json.dumps(data)}
     await conn[database_name][air_hawa_collection_name].insert_one(raw_doc)
+    return raw_doc
+
 
 ### NOTE: Fetch data from HawaDawa server
 async def fetch_air_traffic(conn: AsyncIOMotorClient, date="2019-01-01"):
@@ -130,7 +121,7 @@ async def fetch_air_traffic(conn: AsyncIOMotorClient, date="2019-01-01"):
     while date <= current_date:
         first_day, last_day = get_month_day_range(date)
         data = await fetch_data_by_month_from_hawa_dawa(first_day, last_day)
-        await insert_air_traffic(conn, date, data)
+        data = await insert_air_traffic(conn, date, data)
         result.append(data)
         date = date + relativedelta(months=1)
     return result
@@ -156,12 +147,6 @@ async def fetch_latest_air(conn: AsyncIOMotorClient):
             df = df.loc[mask]
             df.index = df.index.strftime("%Y-%m-%d %H:%M")
             lng, lat = feature['geometry']['coordinates']
-            # result.append({
-            #     'id': feature['properties']['internal_id'],
-            #     'location': {'lat': lat, 'lng': lng},
-            #     'values': df.to_dict(orient='index'),
-            #     'aqi': feature['properties']['AQI']
-            # })
             result[feature['properties']['internal_id']] = {
                 # 'id': feature['properties']['internal_id'],
                 'location': {'lat': lat, 'lng': lng},
@@ -170,6 +155,7 @@ async def fetch_latest_air(conn: AsyncIOMotorClient):
             }
     # print(result)
     return result
+
 
 async def fetch_data_by_month_from_hawa_dawa(start_date, end_date):
     params = {
