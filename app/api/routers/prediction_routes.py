@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends
-from app.tools.predictor.predictor import Predictor
-from app.models.prediction_input import (PlotInput, example_plot_input, PredictionInput, example_prediction_input)
-from app.db.mongodb import AsyncIOMotorClient, get_database
+from ...tools.predictor.predictor import Predictor
+from ...models.prediction_input import (
+    PredictionInput,
+    example_prediction_input,
+    SinglePredictionInput,
+    example_single_prediction_input
+)
+from ...db.mongodb import AsyncIOMotorClient, get_database
 from .utils import (generate_id, generate_single_id)
 
 router = APIRouter()
@@ -12,6 +17,15 @@ async def start_prediction(inputs: PredictionInput = example_prediction_input, d
     Training and prediction using a Long-Short-Term-Memory Recurrent Neural Network
     """
     sim_id = generate_id(inputs)
+    df = await Predictor(db, inputs, sim_id, predictionModel=inputs.predictionModel).predict_emissions()
+    return df.to_json(orient='index')
+
+@router.post('/prediction/single')
+async def start_prediction(inputs: SinglePredictionInput = example_single_prediction_input, db: AsyncIOMotorClient=Depends(get_database)):
+    """
+    Training and prediction using a Long-Short-Term-Memory Recurrent Neural Network
+    """
+    sim_id = generate_single_id(inputs)
     df = await Predictor(db, inputs, sim_id, predictionModel=inputs.predictionModel).predict_emissions()
     return df.to_json(orient='index')
 

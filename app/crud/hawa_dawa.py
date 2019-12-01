@@ -152,7 +152,6 @@ async def fetch_latest_air(conn: AsyncIOMotorClient):
                 df_pol = df_pol.rename(columns={'value': pollutant})
                 frames.append(df_pol)
             df = pd.concat(frames, axis=1)
-            print(df)
             mask = (df.index >= today)
             df = df.loc[mask]
             df.index = df.index.strftime("%Y-%m-%d %H:%M")

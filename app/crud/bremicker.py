@@ -61,8 +61,8 @@ async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=Non
 async def get_latest_bremicker_by_box_id(conn: AsyncIOMotorClient, boxID=672):
     df_traffic = await get_current_bremicker_by_time(conn)
     if df_traffic is not None:
-        df_traffic = df_traffic[int(boxID)]
         print(df_traffic)
+        df_traffic = df_traffic[int(boxID)]
         # return df_traffic.iloc[[-1]]
         return df_traffic
     else:

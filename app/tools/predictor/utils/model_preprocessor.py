@@ -174,6 +174,8 @@ class ModelPreProcessor():
         raw_emissions = await get_raw_emissions_from_sim(self.db, self.sim_id)
         if raw_emissions is None:
             raw_emissions = parser.parse_emissions()
+            if raw_emissions is None:
+                return None
         df = pd.DataFrame(pd.read_json(raw_emissions["emissions"], orient='index'))
         mask = (round(df['lat'], 3) == lat) & (round(df['lng'], 3) == lng)
         df = df.loc[mask]

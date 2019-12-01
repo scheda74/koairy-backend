@@ -58,7 +58,8 @@ class Parser():
     def parse_emissions(self, filepath=None):
         if filepath == None:
             filepath = self.sim_output_path
-    
+        if not os.path.exists(filepath):
+            return None
         context = etree.iterparse(filepath, tag="vehicle")
 
         # create a dataframe from XML data a single call

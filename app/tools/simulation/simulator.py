@@ -3,6 +3,7 @@ import sys
 import datetime
 from random import randrange, choice, choices
 import pandas as pd
+from .single_preprocessor import SingleSimulationPreProcessor
 from ...core.config import EMISSION_OUTPUT_BASE, SUMO_COMMANDLINE, SUMO_GUI, TRAFFIC_INPUT_BASEDIR
 from ...crud.emissions import (get_caqi_emissions_for_sim, get_raw_emissions_from_sim)
 
@@ -125,6 +126,7 @@ class Simulator:
             print("[PARSER] Simulation has already been run. Fetching Data from DB...")
             return
         else:
+            await preprocess_simulation_input()
             if self.df_traffic is None:
                 self.df_traffic = 400
             sumoBinary = SUMO_COMMANDLINE
