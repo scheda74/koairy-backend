@@ -86,7 +86,7 @@ async def get_current_bremicker(boxID, db: AsyncIOMotorClient=Depends(get_databa
         return {'msg': 'Fetching of Bremicker Data unsuccessful', 'status': 404}
 
 @router.get('/air/current')
-async def get_current_air(boxID, db: AsyncIOMotorClient=Depends(get_database)):
+async def get_current_air(db: AsyncIOMotorClient=Depends(get_database)):
     # time = datetime.datetime.today().strftime('%H:%M')
     air = await fetch_latest_air(db)
     if air is not None:

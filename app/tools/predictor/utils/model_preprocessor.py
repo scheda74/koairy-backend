@@ -201,7 +201,8 @@ class ModelPreProcessor():
             start_date,
             end_date, 
             start_hour, 
-            end_hour
+            end_hour,
+            boxID
         )
         df_hawa = df_hawa.loc[~df_hawa.index.duplicated(keep='first')]
 

@@ -127,8 +127,8 @@ class Simulator:
         else:
             if self.df_traffic is None:
                 self.df_traffic = 400
-            # sumoBinary = SUMO_COMMANDLINE
-            sumoBinary = SUMO_GUI
+            sumoBinary = SUMO_COMMANDLINE
+            # sumoBinary = SUMO_GUI
             sumoCMD = [
                 sumoBinary,
                 "-c", self.cfg_filepath,

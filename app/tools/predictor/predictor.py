@@ -1,10 +1,10 @@
 
-from app.tools.predictor.neural_nets import NeuralNet
-from app.tools.predictor.lin_reg import LinReg
+from ...tools.predictor.neural_nets import NeuralNet
+from ...tools.predictor.lin_reg import LinReg
 
-from app.models.prediction_input import (PredictionInput, example_prediction_input)
+from ...models.prediction_input import (PredictionInput, example_prediction_input)
 
-from app.db.mongodb import AsyncIOMotorClient, get_database
+from ...db.mongodb import AsyncIOMotorClient, get_database
 from fastapi import Depends
 
 import abc

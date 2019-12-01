@@ -7,9 +7,9 @@ import calendar
 import json
 # from bson.json_util import dumps
 from dateutil.relativedelta import relativedelta
-
-from app.db.mongodb import AsyncIOMotorClient
-from app.core.config import (
+from ..tools.predictor.utils.bremicker_boxes import bremicker_boxes
+from ..db.mongodb import AsyncIOMotorClient
+from ..core.config import (
     database_name, 
     caqi_emission_collection_name,
     raw_emission_collection_name,
@@ -31,7 +31,7 @@ from app.core.config import (
 #         return await fetch_air_traffic(conn, '2019-01-01')
 #     return await format_to_df(result)
 
-async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00'):
+async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', boxID=672):
     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
     result = []
@@ -54,16 +54,16 @@ async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01
     if len(result) == 0:
         print('[HAWADAWA] No data in db. Fetching from server')
         await fetch_air_traffic(conn, '2019-01-01')
-        return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+        return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), boxID=boxID)
     print('hawa dawa result')
     print(result)
-    df = await format_to_df(result)
+    df = await format_to_df(result, boxID)
     df = df.reset_index()
     mask = (df['time'] > start_date) & (df['time'] <= end_date)
     df = df.loc[mask].set_index('time')
     return df.between_time(start_hour, end_hour)
 
-async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00'):
+async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', boxID=672):
     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
     result = []
@@ -86,30 +86,31 @@ async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='20
     if len(result) == 0:
         print('[HAWADAWA] No data in db. Fetching from server')
         await fetch_air_traffic(conn, '2019-01-01')
-        return await get_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+        return await get_current_hawa_dawa_by_time(conn, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), boxID=boxID)
     print('hawa dawa result')
     print(result)
-    df = await format_to_df(result)
+    df = await format_to_df(result, boxID)
     df = df.reset_index()
     mask = (df['time'] > start_date) & (df['time'] <= end_date)
     df = df.loc[mask].set_index('time')
     return df.between_time(start_hour, end_hour)
 
-async def format_to_df(response):
+async def format_to_df(response, boxID=672):
     months = []
     for elem in response:
         data = json.loads(elem['data'])
         for feature in data['features']:
             if (feature['properties']['type'] == 'hawadawa') and feature['properties']['timeValueSeries']:
-                df = pd.DataFrame(dict([ (k, pd.Series(v)) for k, v in feature['properties']['timeValueSeries'].items() ]))
-                frames = []
-                for pollutant in df.columns:
-                    df_pol = df[pollutant].apply(pd.Series)[['time', 'value']].dropna()
-                    df_pol['time'] = pd.to_datetime(df_pol['time'])
-                    df_pol = df_pol.set_index('time')
-                    df_pol = df_pol.rename(columns={'value': pollutant})
-                    frames.append(df_pol)
-                months.append( pd.concat(frames, axis=1).dropna() )
+                if feature['properties']['internal_id'] == bremicker_boxes[boxID]['airSensor']:
+                    df = pd.DataFrame(dict([ (k, pd.Series(v)) for k, v in feature['properties']['timeValueSeries'].items() ]))
+                    frames = []
+                    for pollutant in df.columns:
+                        df_pol = df[pollutant].apply(pd.Series)[['time', 'value']].dropna()
+                        df_pol['time'] = pd.to_datetime(df_pol['time'])
+                        df_pol = df_pol.set_index('time')
+                        df_pol = df_pol.rename(columns={'value': pollutant})
+                        frames.append(df_pol)
+                    months.append( pd.concat(frames, axis=1).dropna() )
     result = pd.concat(months)
     # print(result)
     return result
@@ -136,7 +137,10 @@ async def fetch_air_traffic(conn: AsyncIOMotorClient, date="2019-01-01"):
 
 async def fetch_latest_air(conn: AsyncIOMotorClient):
     response = await fetch_today_from_hawa_dawa()
-    result = []
+    today = datetime.datetime.today()
+    today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+    print(today)
+    result = {}
     for feature in response['features']:
         if (feature['properties']['type'] == 'hawadawa') and feature['properties']['timeValueSeries']:
             df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in feature['properties']['timeValueSeries'].items()]))
@@ -148,14 +152,24 @@ async def fetch_latest_air(conn: AsyncIOMotorClient):
                 df_pol = df_pol.rename(columns={'value': pollutant})
                 frames.append(df_pol)
             df = pd.concat(frames, axis=1)
+            print(df)
+            mask = (df.index >= today)
+            df = df.loc[mask]
             df.index = df.index.strftime("%Y-%m-%d %H:%M")
             lng, lat = feature['geometry']['coordinates']
-            result.append({
-                'id': feature['properties']['internal_id'],
+            # result.append({
+            #     'id': feature['properties']['internal_id'],
+            #     'location': {'lat': lat, 'lng': lng},
+            #     'values': df.to_dict(orient='index'),
+            #     'aqi': feature['properties']['AQI']
+            # })
+            result[feature['properties']['internal_id']] = {
+                # 'id': feature['properties']['internal_id'],
                 'location': {'lat': lat, 'lng': lng},
-                'values': df.to_dict(orient='index')
-            })
-    print(result)
+                'values': df.to_dict(orient='index'),
+                'aqi': feature['properties']['AQI']
+            }
+    # print(result)
     return result
 
 async def fetch_data_by_month_from_hawa_dawa(start_date, end_date):
