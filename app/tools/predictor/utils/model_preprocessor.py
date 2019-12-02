@@ -15,9 +15,6 @@ from ....models.prediction_input import PredictionInput
 from ....crud.hawa_dawa import get_hawa_dawa_by_time
 from ....crud.bremicker import get_bremicker_by_time
 from .weather import fetch_weather_data
-# from .bremicker_boxes import bremicker_boxes
-# from ...simulation.parse_emission import Parser
-
 
 
 class ModelPreProcessor():
@@ -135,7 +132,7 @@ class ModelPreProcessor():
         df_formatted = df_formatted.rename(columns={'pm2.5': 'pm25'})
         df_formatted.columns = df_formatted.columns.astype(str)
         await insert_aggregated_data(self.db, self.sim_id, df_formatted.to_dict(orient='index'))
-        return df_combined
+        return df_combined.dropna()
 
 
     async def aggregate_real_data(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
@@ -159,7 +156,7 @@ class ModelPreProcessor():
         return df_sim
         # return [df_air, df_sim]
 
-    async def fetch_air_and_traffic(self, start_date='2019-08-01', end_date='2019-11-01', start_hour='7:00', end_hour='10:00'):
+    async def fetch_air_and_traffic(self, start_date='2019-08-01', end_date='2019-12-01', start_hour='7:00', end_hour='10:00'):
         # NOTE: Get real weather data and format it accordingly. Here we'll look at 2019 from 7:00 to 10:00
         df_traffic = await get_bremicker_by_time(
             self.db,
@@ -198,15 +195,15 @@ class ModelPreProcessor():
             raw_emissions = await parser.parse_emissions()
             if raw_emissions is None:
                 simulator = Simulator(
-                    self.db,
-                    self.sim_id,
-                    self.inputs,
+                    db=self.db,
+                    sim_id=self.sim_id,
+                    inputs=self.inputs,
                     df_traffic=self.df_traffic
                 )
                 if self.df_traffic is not None:
                     print("Starting SUMO...")
                     await simulator.start_single()
-                    raw_emissions = get_raw_emissions_from_sim(self.db, self.sim_id)
+                    raw_emissions = await get_raw_emissions_from_sim(self.db, self.sim_id)
                 else:
                     print("Starting SUMO...")
                     await simulator.start()

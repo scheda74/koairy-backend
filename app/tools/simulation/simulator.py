@@ -1,6 +1,7 @@
 import os
 import sys
-import datetime
+import time
+import json
 from random import randrange, choice, choices
 import pandas as pd
 from ...core.config import EMISSION_OUTPUT_BASE, SUMO_COMMANDLINE, SUMO_GUI, TRAFFIC_INPUT_BASEDIR, SUMO_CFG
@@ -32,7 +33,7 @@ class Simulator:
         self.tripinfo_filepath = EMISSION_OUTPUT_BASE + 'tripinfo_%s.xml' % self.sim_id
         self.fcdoutput_filepath = EMISSION_OUTPUT_BASE + 'fcdoutput_%s.xml' % self.sim_id
         self.emission_output_filepath = EMISSION_OUTPUT_BASE + "emission_output_%s.xml" % self.sim_id
-        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.box_id
+        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.sim_id
         self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.box_id
         self.df_traffic = df_traffic
 
@@ -54,7 +55,16 @@ class Simulator:
         if raw is not None:
             print("[PARSER] Simulation has already been run. Fetching Data from DB...")
             return raw
-        else: 
+        else:
+            print("Starting PreProcessor...")
+            processor = SimulationPreProcessor(
+                db=self.db,
+                sim_id=self.sim_id,
+                inputs=self.inputs,
+                df_traffic=self.df_traffic
+            )
+            # cfg_filepath = await processor.preprocess_simulation_input()
+            self.cfg_filepath = await processor.preprocess_simulation_input()
             sumoBinary = SUMO_COMMANDLINE
             sumoCMD = [
                 sumoBinary, 
@@ -112,7 +122,8 @@ class Simulator:
                     veh = veh_ids.pop(0) if len(veh_ids) != 0 else randrange(1, max_vehicles + 1, 1)
                     route_id = traci.vehicle.getRouteID(veh) if len(veh_ids) != 0 else choice(loaded_routes)
 
-                    new_id = datetime.datetime.today().timestamp()
+                    # new_id = datetime.datetime.today().timestamp()
+                    new_id = time.time()
                     print("[TRACI] added vehicle id: %s_%s" % (str(veh), str(new_id)))
                     # print("[TRACI] added vehicle route id", str(route_id))
                     traci.vehicle.add(
@@ -141,7 +152,7 @@ class Simulator:
                 df_traffic=self.df_traffic
             )
             # cfg_filepath = await processor.preprocess_simulation_input()
-            self.cfg_filepath = await processor.preprocess_simulation_input()
+            self.cfg_filepath = await processor.preprocess_single_simulation_input()
 
             sumoBinary = SUMO_COMMANDLINE
             # sumoBinary = SUMO_GUI
@@ -162,4 +173,6 @@ class Simulator:
             print("Parsing results...")
             parser = Parser(self.db, self.sim_id, self.box_id)
             df = await parser.parse_emissions()
+            # df = pd.DataFrame.from_dict(json.loads(raw["emissions"]), orient='index')
+            # df = df.groupby(['time', 'lat', 'lng'])[['CO2', 'CO', 'NOx', 'PMx', 'fuel']].sum()
             return df.reset_index().to_json(orient='index')

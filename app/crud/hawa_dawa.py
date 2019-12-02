@@ -1,5 +1,3 @@
-from typing import List, Optional
-from datetime import datetime
 import pandas as pd
 import requests
 import datetime
@@ -48,7 +46,6 @@ async def get_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-08-01
     df = df.reset_index()
     mask = (df['time'] > start_date) & (df['time'] <= end_date)
     df = df.loc[mask].set_index('time')
-    print(df)
     return df.between_time(start_hour, end_hour)
 
 # async def get_current_hawa_dawa_by_time(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30', start_hour='07:00', end_hour='10:00', box_id=672):

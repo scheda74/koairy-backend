@@ -1,5 +1,3 @@
-from typing import List, Optional
-from datetime import datetime
 import pandas as pd
 import requests
 import datetime
@@ -13,8 +11,6 @@ from ..core.config import (
     BREMICKER_URL,
     bremicker_collection_name
 )
-
-# ______________ DB FUNCTIONS ______________ #
 
 
 async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30'):
@@ -45,13 +41,13 @@ async def get_bremicker_by_time(conn: AsyncIOMotorClient, box_id, start_date='20
     df = df.loc[mask].set_index('time')
     return df.between_time(start_hour, end_hour)
 
+
 async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=None, end_date=None, start_hour=None, end_hour=None):
     try:
         print('[BREMICKER] Start fetching bremicker data...')
         bremicker = await fetch_current_bremicker(conn, start_date, end_date)
     except Exception as e:
-        print('[BREMICKER] fetching not successful! %s' % str(e))
-        return None
+        raise Exception('[BREMICKER] fetching not successful! %s' % str(e))
     if bremicker is not None:
         df_traffic = pd.DataFrame(pd.read_json(bremicker))
         df_traffic.index.name = 'time'
@@ -77,8 +73,13 @@ async def get_latest_bremicker_by_box_id(conn: AsyncIOMotorClient, box_id=672):
 
 ### NOTE: Fetch data from bremicker
 async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end_date=None):
-    if end_date is None:
-        end_date = datetime.date.today().strftime('%Y-%m-%d')
+    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+    if end_date is not None:
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        end_date = datetime.date.today()
+    print(start_date)
+    print(end_date)
     params = {
         'key': BREMICKER_API_KEY,
         'from': start_date, 
@@ -99,10 +100,17 @@ async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end
 
 
 async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None):
-    if end_date is None:
-        end_date = datetime.date.today().strftime('%Y-%m-%d')
-    print(start_date)
-    print(end_date)
+    if start_date is not None:
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+    else:
+        start_date = datetime.date.today()
+
+    if end_date is not None:
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        end_date = datetime.date.today()
+    # print(start_date)
+    # print(end_date)
     params = {
         'key': BREMICKER_API_KEY,
         'from': start_date,
@@ -111,13 +119,12 @@ async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end
     try:
         response = requests.get(BREMICKER_URL, params=params)
         response = response.json()
-        print('response')
         # print(response)
         response = await format_bremicker(response)
         # await insert_bremicker(conn, start_date, response)
-        print(response)
+        # print(response)
     except JSONDecodeError as error:
-        print('error in json decoding: %s' % error)
+        raise Exception('[BREMICKER] Error in json decoding: %s' % error)
     else:
         return response
 
@@ -137,7 +144,7 @@ async def format_bremicker(data):
 async def insert_bremicker(conn: AsyncIOMotorClient, date, data: dict):
     print("[MONGODB] Saving Bremicker data")
     raw_doc = {}
-    raw_doc["measure_date"] = date
+    raw_doc["measure_date"] = date.strftime('%Y-%m-%d')
     raw_doc["data"] = data
     await conn[database_name][bremicker_collection_name].insert_one(raw_doc)
     print("[MONGODB] Bremicker data successfully saved!")

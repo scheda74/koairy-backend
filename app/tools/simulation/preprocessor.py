@@ -118,8 +118,8 @@ class SimulationPreProcessor:
         self.trip_filepath = TRIP_OUTPUT + self.sim_id + ".trip.xml"
         self.route_filepath = ROUTE_OUTPUT + self.sim_id + ".rou.xml"
         self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
-        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.box_id
-        self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.box_id
+        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.sim_id
+        self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.sim_id
 
         new_net_path = NET_BASEDIR + "%s.net.xml" % self.box_id
         if not os.path.exists(new_net_path):

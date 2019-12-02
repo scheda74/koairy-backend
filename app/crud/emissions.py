@@ -1,5 +1,4 @@
 import datetime
-from datetime import datetime
 from ..db.mongodb import AsyncIOMotorClient
 from ..core.config import (
     database_name,
@@ -23,7 +22,7 @@ async def get_caqi_emissions_for_sim(conn: AsyncIOMotorClient, sim_id: str):
 async def get_raw_emissions_from_sim(conn: AsyncIOMotorClient, sim_id: str):
     try:
         emission_doc = await conn[database_name][raw_emission_collection_name].find_one({"sim_id": sim_id},
-                                                                                        projection={"id": False})
+                                                                                        projection={"_id": False})
     except Exception as e:
         raise Exception("[MONGODB] Error while fetching from database: %s" % str(e))
     else:
@@ -41,7 +40,7 @@ async def insert_caqi_emissions(conn: AsyncIOMotorClient, sim_id: str, emissions
 
 async def insert_raw_emissions(conn: AsyncIOMotorClient, sim_id: str, emissions: dict):
     print("[MONGODB] Saving simulated emissions")
-    raw_doc = {"emissions": emissions, "created_at": datetime.datetime.utcnow(), "sim_id": sim_id}
+    raw_doc = {"emissions": emissions, "created_at": datetime.datetime.utcnow().strftime('%Y-%m-%d'), "sim_id": sim_id}
     try:
         await conn[database_name][raw_emission_collection_name].insert_one(raw_doc)
     except Exception as e:
@@ -60,8 +59,7 @@ async def insert_aggregated_data(conn: AsyncIOMotorClient, sim_id: str, data: di
 async def get_aggregated_data_from_sim(conn: AsyncIOMotorClient, sim_id: str):
     print("[MONGODB] Fetching aggregated data")
     try:
-        aggregated_data = await conn[database_name][training_data_collection_name].find_one({"sim_id": sim_id},
-                                                                                            projection={"_id": False})
+        aggregated_data = await conn[database_name][training_data_collection_name].find_one({"sim_id": sim_id}, {"_id": False})
         if aggregated_data:
             return aggregated_data
         else:
