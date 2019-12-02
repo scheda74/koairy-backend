@@ -99,31 +99,34 @@ class Simulator:
             self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 3600)
             max_vehicles = self.df_traffic[self.box_id].max()
             current_step = 0
+            detected_vehicles = 0
             while traci.simulation.getMinExpectedNumber() > 0:
                 if current_step > (self.timesteps * 1.2):
                     print("[SUMO] Simulation took to long. Aborting after %s simulated seconds" % str(current_step))
                     break
+                detected_vehicles += traci.inductionloop.getLastStepVehicleNumber("det_0")
+                detected_vehicles += traci.inductionloop.getLastStepVehicleNumber("det_1")
                 traci.simulationStep()
                 if current_step in detector_steps:
                     step = detector_steps.pop(0)
-
                     vehicle_threshold = self.df_traffic.loc[step][self.box_id]
-                    det_veh_number = traci.inductionloop.getLastStepVehicleNumber("det_0")
-
-                    needed_vehicles = det_veh_number - vehicle_threshold
+                    det_veh_number = traci.inductionloop.getLastStepVehicleNumber("det_1")
+                    print('simulated vehicle number at detector 1: %s' % str(det_veh_number))
+                    needed_vehicles = detected_vehicles - vehicle_threshold
                     veh_ids = list(traci.inductionloop.getLastStepVehicleIDs("det_0"))
+                    veh_ids += list(traci.inductionloop.getLastStepVehicleIDs("det_1"))
+                    veh_ids = list(dict.fromkeys(veh_ids))
                     loaded_routes = traci.route.getIDList()
-
+                    print('detected vehicles until now', detected_vehicles)
                     print('current step: ', step)
                     print('vehicle number too much/low: needed vehicles: %s' % str(needed_vehicles))
-                    print('simulated vehicle number %s' % str(det_veh_number))
 
-                    while needed_vehicles > 0:
-                        #remove vehicles
-                        veh = veh_ids.pop(0)
-                        # print("[TRACI] removed vehicle %s" % veh)
-                        traci.vehicle.remove(veh)
-                        needed_vehicles -= 1
+                    # while needed_vehicles > 0:
+                    #     #remove vehicles
+                    #     veh = veh_ids.pop(0)
+                    #     # print("[TRACI] removed vehicle %s" % veh)
+                    #     traci.vehicle.remove(veh)
+                    #     needed_vehicles -= 1
 
                     while needed_vehicles < 0:
                         # add vehicles
@@ -132,7 +135,7 @@ class Simulator:
 
                         # new_id = datetime.datetime.today().timestamp()
                         new_id = time.time()
-                        print("[TRACI] added vehicle id: %s_%s" % (str(veh), str(new_id)))
+                        # print("[TRACI] added vehicle id: %s_%s" % (str(veh), str(new_id)))
                         # print("[TRACI] added vehicle route id", str(route_id))
                         traci.vehicle.add(
                             vehID='%s_%s' % (str(veh), str(new_id)),
@@ -140,6 +143,7 @@ class Simulator:
                             typeID=choices(emission_classes, weights=emission_weights)[0]
                         )
                         needed_vehicles += 1
+                    detected_vehicles = 0
                 current_step += 1
         except Exception as e:
             raise Exception('[SUMO] An error occurred while running the simulation: %s' % str(e))

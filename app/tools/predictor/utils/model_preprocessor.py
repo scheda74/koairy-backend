@@ -96,9 +96,9 @@ class ModelPreProcessor():
         pmx_var = df_pmx.var(axis=0)
         pmx_std = df_pmx.std(axis=0)
         pmx_mean = df_pmx.mean(axis=0)
-        print('Var NOx: %s -- Var PMx: %s \n', nox_var, pmx_var)
-        print('Std NOx: %s -- Std PMx: %s \n', nox_std, pmx_std)
-        print('Mean NOx: %s -- Mean PMx: %s \n', nox_mean, pmx_mean)
+        print('Var NOx: %s -- Var PMx: %s \n' % (nox_var, pmx_var))
+        print('Std NOx: %s -- Std PMx: %s \n' % (nox_std, pmx_std))
+        print('Mean NOx: %s -- Mean PMx: %s \n' % (nox_mean, pmx_mean))
 
         sim_rows = df_sim.shape[0]
         air_rows = df_air.shape[0]

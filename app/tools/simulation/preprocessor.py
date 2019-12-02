@@ -283,7 +283,23 @@ class SimulationPreProcessor:
 
     def write_detector_add_file(self):
         detectors = []
-        xy_pos = self.net.convertLonLat2XY(bremicker_boxes[self.box_id]['lng'], bremicker_boxes[self.box_id]['lat'])
+        lat = bremicker_boxes[self.box_id]['lat']
+        lng = bremicker_boxes[self.box_id]['lng']
+        xy_pos = self.net.convertLonLat2XY(lng, lat)
+
+        best_lane = self.get_lane_at_pos(xy_pos)
+        pos, d = best_lane.getClosestLanePosAndDist(xy_pos)
+        new_xy = best_lane.getBoundingBox()
+
+        neighbor_lane = self.get_lane_at_pos(new_xy)
+        # neighbor_lane = best_lane.getNeigh()
+        neighbor_pos, neighbor_d = neighbor_lane.getClosestLanePosAndDist(new_xy)
+
+        detectors.append(sumolib.sensors.inductive_loop.InductiveLoop('det_0', best_lane.getID(), pos, (self.timesteps / 3600), self.det_out_filepath))
+        detectors.append(sumolib.sensors.inductive_loop.InductiveLoop('det_1', neighbor_lane.getID(), neighbor_pos, (self.timesteps / 3600), self.det_out_filepath))
+        sumolib.files.additional.write(self.add_filepath, detectors)
+
+    def get_lane_at_pos(self, xy_pos):
         # look 10m around the position
         lanes = self.net.getNeighboringLanes(xy_pos[0], xy_pos[1], 10)
         # attention, result is unsorted
@@ -293,9 +309,10 @@ class SimulationPreProcessor:
             if dist < ref_d:
                 ref_d = dist
                 best_lane = lane
-        pos, d = best_lane.getClosestLanePosAndDist(xy_pos)
-        detectors.append(sumolib.sensors.inductive_loop.InductiveLoop('det_0', best_lane.getID(), pos, (self.timesteps / 3600), self.det_out_filepath))
-        sumolib.files.additional.write(self.add_filepath, detectors)
+        # pos, d = best_lane.getClosestLanePosAndDist(xy_pos)
+        if best_lane is None:
+            raise Exception('[SIMULATION PREPROCESSOR] lane next to position %s %s not found!' % (str(xy_pos[0]), str(xy_pos[1])))
+        return best_lane
 
     async def preprocess_simulation_input(self):
         print("path: %s" % self.weights_filepath)
