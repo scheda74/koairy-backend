@@ -72,7 +72,7 @@ async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=Non
 async def get_latest_bremicker_by_box_id(conn: AsyncIOMotorClient, box_id=672):
     df_traffic = await get_current_bremicker_by_time(conn)
     if df_traffic is not None:
-        print(df_traffic)
+        # print(df_traffic)
         df_traffic = df_traffic[int(box_id)]
         # return df_traffic.iloc[[-1]]
         return df_traffic
@@ -146,7 +146,7 @@ async def format_bremicker(data):
     df = df.reset_index().rename(columns={0: 'veh'})
     df['time'] = df['time'].astype(str)
     df = df.groupby('boxID')[['time', 'veh']].apply(lambda x: dict(x.values)).to_json()
-    print(df)
+    # print(df)
     return df
 
 
