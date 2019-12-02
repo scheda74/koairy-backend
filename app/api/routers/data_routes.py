@@ -4,7 +4,7 @@ import datetime
 from ...crud.bremicker import get_current_bremicker_by_time, get_latest_bremicker_by_box_id
 from ...crud.hawa_dawa import fetch_latest_air
 from ...tools.simulation.parse_emission import Parser
-from ...tools.predictor.lin_reg import LinReg
+# from ...tools.predictor.lin_reg import LinReg
 from ...models.simulation_input import SimulationInput, example_simulation_input
 from ...models.prediction_input import (
     PredictionInput,
@@ -48,9 +48,9 @@ async def get_caqi(inputs: SimulationInput = example_simulation_input, db: Async
     return await parser.get_caqi_data()
 
 
-@router.post('/get/sensors')
-async def get_sensors(db: AsyncIOMotorClient=Depends(get_database)):
-    lr = LinReg(db)
+# @router.post('/get/sensors')
+# async def get_sensors(db: AsyncIOMotorClient=Depends(get_database)):
+    # lr = LinReg(db)
     # await lr.get_hw_data()
 
 @router.post('/simulation/compare')

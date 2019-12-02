@@ -8,3 +8,4 @@ def generate_id(inputs):
 def generate_single_id(inputs):
     veh_dist = "".join([str(v).replace('.', '') for v in inputs.vehicleDistribution.values()])
     return "%s_%s_%s_%s" % (inputs.box_id, inputs.vehicleNumber, inputs.timesteps, veh_dist)
+

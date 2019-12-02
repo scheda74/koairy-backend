@@ -1,6 +1,5 @@
 
 from ...tools.predictor.neural_nets import NeuralNet
-from ...tools.predictor.lin_reg import LinReg
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import (mean_absolute_error, mean_squared_error)
@@ -114,16 +113,16 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
 
         print('Intercept: \n', model.intercept_)
         print('Coefficients: \n', model.coef_)
-        df_test[self.output_key + '_lin_predicted'] = model.predict(df_test[self.input_keys])
+        df_test[self.output_key + '_predicted'] = model.predict(df_test[self.input_keys])
         df_test['MeanAbsErr'] = str(
             mean_absolute_error(df_test[self.output_key].to_numpy(),
-                                df_test['%s_lin_predicted' % self.output_key].to_numpy()))
+                                df_test['%s_predicted' % self.output_key].to_numpy()))
         # print(df_test)
         # df_test = df_test.reset_index()
-        result = df_test[[self.output_key, '%s_lin_predicted' % self.output_key]]
+        result = df_test[[self.output_key, '%s_predicted' % self.output_key]]
         print("Mean Abs Error LinReg: " + str(
             mean_absolute_error(result[self.output_key].to_numpy(),
-                                result['%s_lin_predicted' % self.output_key].to_numpy())))
+                                result['%s_predicted' % self.output_key].to_numpy())))
         # self.save_df_to_plot(result[[output_key, '%s_lin_predicted' % output_key]], 'new_%s_lin_dist_prediction' % output_key)
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result
@@ -157,16 +156,16 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
         model.fit(train_scaled, df_train[self.output_key])
 
         # df_test[output_key + '_mlp_predicted'] = model.predict(df_test[input_keys])
-        df_test[self.output_key + '_mlp_predicted'] = model.predict(test_scaled)
-        df_test = df_test[[self.output_key, '%s_mlp_predicted' % self.output_key]]
+        df_test[self.output_key + '_predicted'] = model.predict(test_scaled)
+        df_test = df_test[[self.output_key, '%s_predicted' % self.output_key]]
         df_test['MeanAbsErr'] = str(
-            mean_absolute_error(df_test[self.output_key].to_numpy(), df_test['%s_mlp_predicted' % self.output_key].to_numpy())
+            mean_absolute_error(df_test[self.output_key].to_numpy(), df_test['%s_predicted' % self.output_key].to_numpy())
         )
 
-        result = df_test[[self.output_key, '%s_mlp_predicted' % self.output_key]]
+        result = df_test[[self.output_key, '%s_predicted' % self.output_key]]
         # print(result)
         print("Mean Abs Error MLP: " + str(
-            mean_absolute_error(result[self.output_key].to_numpy(), result['%s_mlp_predicted' % self.output_key].to_numpy())))
+            mean_absolute_error(result[self.output_key].to_numpy(), result['%s_predicted' % self.output_key].to_numpy())))
         # self.save_df_to_plot(result[[output_key, '%s_mlp_predicted' % output_key]], 'new_%s_mlp_dist_regressor' % output_key.replace('.', '-'))
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result

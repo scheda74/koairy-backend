@@ -7,7 +7,7 @@ from ...models.prediction_input import (
     # SinglePredictionInput,
     # example_single_prediction_input
 )
-from ...crud.bremicker import get_current_bremicker_by_time
+from ...crud.bremicker import fetch_latest_bremicker
 from ...db.mongodb import AsyncIOMotorClient, get_database
 from .utils import (generate_id, generate_single_id)
 
@@ -34,11 +34,7 @@ async def start_single_prediction(inputs: PredictionInput = example_prediction_i
     try:
         df_traffic = None
         if inputs.vehicleNumber is None:
-            df_traffic = await get_current_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
-            # if there are 2 hours or less (around midnight) take yesterday!
-            if df_traffic.shape[0] < 3:
-                yesterday = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d')
-                df_traffic = await get_current_bremicker_by_time(db, start_date=yesterday, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
+            df_traffic = await fetch_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
             inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
 
         sim_id = generate_single_id(inputs)

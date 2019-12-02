@@ -1,16 +1,25 @@
 import pandas as pd
 import requests
 import datetime
+from datetime import timedelta
 from json import JSONDecodeError
-
 from ..db.mongodb import AsyncIOMotorClient
-
 from ..core.config import (
     database_name,
     BREMICKER_API_KEY,
     BREMICKER_URL,
     bremicker_collection_name
 )
+
+
+async def fetch_latest_bremicker(db, start_hour, end_hour):
+    df_traffic = await get_current_bremicker_by_time(db, start_hour=start_hour, end_hour=end_hour)
+    # if there are 2 hours or less (around midnight) take yesterday!
+    if df_traffic.shape[0] < 3:
+        yesterday = datetime.datetime.strftime(datetime.datetime.now() - timedelta(1), '%Y-%m-%d')
+        df_traffic = await get_current_bremicker_by_time(db, start_date=yesterday, start_hour=start_hour,
+                                                         end_hour=end_hour)
+    return df_traffic
 
 
 async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30'):
