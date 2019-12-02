@@ -175,4 +175,4 @@ class Simulator:
             df = await parser.parse_emissions()
             # df = pd.DataFrame.from_dict(json.loads(raw["emissions"]), orient='index')
             # df = df.groupby(['time', 'lat', 'lng'])[['CO2', 'CO', 'NOx', 'PMx', 'fuel']].sum()
-            return df.reset_index().to_json(orient='index')
+            return df.to_json(orient='index')

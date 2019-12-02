@@ -60,7 +60,7 @@ class Parser:
         if filepath == None:
             filepath = self.sim_output_path
         if not os.path.exists(filepath):
-            print("Apparently simulation hasn't been run. Start it now...")
+            print("[PARSER] Apparently simulation hasn't been run. Start it now...")
             return None
         context = etree.iterparse(filepath, tag="vehicle")
 
@@ -78,15 +78,16 @@ class Parser:
         df.drop(coords, axis=1, inplace=True)
         # effectively creating areas of 1/10000th degrees per side
         latlng = ['lat', 'lng']
-        df[latlng] = df[latlng].round(4)
+        df[latlng] = df[latlng].round(3)
         # df[entries] = df[entries].resample('60s', how='sum')
         # df = df.groupby(['time', 'lat', 'lng'])[entries].sum()
         # df = df.reset_index()
         df = df.groupby([df.time // 60, 'lat', 'lng'])[entries].sum()
-
+        # Get all pollutants in ug instead of mg => divide by 1000
+        df[['PMx', 'NOx', 'CO', 'CO2']] = df[['PMx', 'NOx', 'CO', 'CO2']].apply(lambda x: x / 1000, axis=1)
         raw_emissions = df.reset_index().to_json(orient='index')
         await insert_raw_emissions(self.db, self.sim_id, raw_emissions)
-        return df
+        return df.reset_index()
 
     async def get_caqi_data(self):
         caqi = await get_caqi_emissions_for_sim(self.db, self.sim_id)

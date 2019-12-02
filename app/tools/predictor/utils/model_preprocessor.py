@@ -85,7 +85,8 @@ class ModelPreProcessor():
         
         df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
         df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
-        # print(df_sim)
+        if df_sim.shape[0] == 0:
+            raise Exception('[MODEL PREPROCESSOR] simulation dataframe empty. Something went wrong')
 
         df_nox = df_sim['NOx']
         df_pmx = df_sim['PMx']
@@ -203,11 +204,16 @@ class ModelPreProcessor():
                 if self.df_traffic is not None:
                     print("Starting SUMO...")
                     await simulator.start_single()
-                    raw_emissions = await get_raw_emissions_from_sim(self.db, self.sim_id)
                 else:
                     print("Starting SUMO...")
                     await simulator.start()
-        df = pd.DataFrame(pd.read_json(raw_emissions["emissions"], orient='index'))
+                raw_emissions = await get_raw_emissions_from_sim(self.db, self.sim_id)
+                raw_emissions = pd.DataFrame(pd.read_json(raw_emissions["emissions"], orient='index'))
+        else:
+            raw_emissions = pd.DataFrame(pd.read_json(raw_emissions["emissions"], orient='index'))
+        df = raw_emissions
+        print(df)
         mask = (round(df['lat'], 3) == lat) & (round(df['lng'], 3) == lng)
         df = df.loc[mask]
+        print(df)
         return df.fillna(method='ffill')
