@@ -315,6 +315,7 @@ class SimulationPreProcessor:
         return self.cfg_filepath
 
     async def preprocess_single_simulation_input(self):
+        print("[SUMO] Simulating with %s agents" % str(self.agents))
         if not os.path.exists(self.cfg_filepath) or \
                 not os.path.exists(self.route_filepath) or \
                 not os.path.exists(self.add_filepath) or \

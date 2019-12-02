@@ -46,9 +46,8 @@ async def start_single_simulation(inputs: SimulationInput = example_simulation_i
     Starts a new simulation with given input parameters...
     """
     try:
-        df_traffic = None
+        df_traffic = await fetch_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
         if inputs.vehicleNumber is None:
-            df_traffic = await fetch_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
             inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
         sim_id = generate_single_id(inputs)
 

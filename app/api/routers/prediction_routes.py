@@ -32,9 +32,8 @@ async def start_single_prediction(inputs: PredictionInput = example_prediction_i
     Training and prediction using a Long-Short-Term-Memory Recurrent Neural Network
     """
     try:
-        df_traffic = None
+        df_traffic = await fetch_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
         if inputs.vehicleNumber is None:
-            df_traffic = await fetch_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
             inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
 
         sim_id = generate_single_id(inputs)

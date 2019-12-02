@@ -143,6 +143,7 @@ async def fetch_latest_air(conn: AsyncIOMotorClient):
             mask = (df.index >= today)
             df = df.loc[mask]
             df.index = df.index.strftime("%Y-%m-%d %H:%M")
+            df = df.fillna(-999)
             lng, lat = feature['geometry']['coordinates']
             result[feature['properties']['internal_id']] = {
                 # 'id': feature['properties']['internal_id'],
@@ -150,7 +151,6 @@ async def fetch_latest_air(conn: AsyncIOMotorClient):
                 'values': df.to_dict(orient='index'),
                 'aqi': feature['properties']['AQI']
             }
-    # print(result)
     return result
 
 

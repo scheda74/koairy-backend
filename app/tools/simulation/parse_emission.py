@@ -70,7 +70,8 @@ class Parser:
         df = pd.DataFrame(
             self.extract_attributes(context, coords + entries + ['time']),
             columns=coords + entries + ['time'], dtype=np.float)
-
+        if df.shape[0] == 0:
+            raise Exception("[PARSER] Parsed file but received an empty dataframe. Something wrong with simulation")
         # convert *all coordinates together*, remove the x, y columns
         # note that the net.convertXY2LonLat() call *alters the 
         # numpy arrays in-place* so we don’t want to keep them anyway. 

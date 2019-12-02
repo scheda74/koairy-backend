@@ -43,8 +43,12 @@ class Simulator:
             self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
 
     async def run(self):
+        current_step = 0
         while traci.simulation.getMinExpectedNumber() > 0:
+            if current_step > (self.timesteps * 1.2):
+                break
             traci.simulationStep()
+            current_step += 1
         traci.close()
         sys.stdout.flush()
         return
@@ -85,58 +89,64 @@ class Simulator:
             return df.reset_index().to_json(orient='index')
 
     async def run_update(self):
-        emission_classes = list(self.veh_dist.keys())
-        emission_weights = list(self.veh_dist.values())
-        detector_steps = [step * 3600 for step in range(0, int(self.timesteps / 3600) + 1)]
-        self.df_traffic = self.df_traffic.reset_index()
-        self.df_traffic = self.df_traffic[[self.box_id]]
-        self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 3600)
-        max_vehicles = self.df_traffic[self.box_id].max()
-        print(self.df_traffic)
-        current_step = 0
-        while traci.simulation.getMinExpectedNumber() > 0:
-            traci.simulationStep()
-            if current_step in detector_steps:
-                step = detector_steps.pop(0)
+        try:
+            emission_classes = list(self.veh_dist.keys())
+            emission_weights = list(self.veh_dist.values())
+            detector_steps = [step * 3600 for step in range(0, int(self.timesteps / 3600) + 1)]
+            print(self.df_traffic)
+            self.df_traffic = self.df_traffic.reset_index()
+            self.df_traffic = self.df_traffic[[self.box_id]]
+            self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 3600)
+            max_vehicles = self.df_traffic[self.box_id].max()
+            current_step = 0
+            while traci.simulation.getMinExpectedNumber() > 0:
+                if current_step > (self.timesteps * 1.2):
+                    print("[SUMO] Simulation took to long. Aborting after %s simulated seconds" % str(current_step))
+                    break
+                traci.simulationStep()
+                if current_step in detector_steps:
+                    step = detector_steps.pop(0)
 
-                vehicle_threshold = self.df_traffic.loc[step][self.box_id]
-                det_veh_number = traci.inductionloop.getLastStepVehicleNumber("det_0")
+                    vehicle_threshold = self.df_traffic.loc[step][self.box_id]
+                    det_veh_number = traci.inductionloop.getLastStepVehicleNumber("det_0")
 
-                needed_vehicles = det_veh_number - vehicle_threshold
-                veh_ids = list(traci.inductionloop.getLastStepVehicleIDs("det_0"))
-                loaded_routes = traci.route.getIDList()
+                    needed_vehicles = det_veh_number - vehicle_threshold
+                    veh_ids = list(traci.inductionloop.getLastStepVehicleIDs("det_0"))
+                    loaded_routes = traci.route.getIDList()
 
-                print('current step: ', step)
-                print('vehicle number too much/low: needed vehicles: %s' % str(needed_vehicles))
-                print('simulated vehicle number %s' % str(det_veh_number))
+                    print('current step: ', step)
+                    print('vehicle number too much/low: needed vehicles: %s' % str(needed_vehicles))
+                    print('simulated vehicle number %s' % str(det_veh_number))
 
-                while needed_vehicles > 0:
-                    #remove vehicles
-                    veh = veh_ids.pop(0)
-                    # print("[TRACI] removed vehicle %s" % veh)
-                    traci.vehicle.remove(veh)
-                    needed_vehicles -= 1
+                    while needed_vehicles > 0:
+                        #remove vehicles
+                        veh = veh_ids.pop(0)
+                        # print("[TRACI] removed vehicle %s" % veh)
+                        traci.vehicle.remove(veh)
+                        needed_vehicles -= 1
 
-                while needed_vehicles < 0:
-                    # add vehicles
-                    veh = veh_ids.pop(0) if len(veh_ids) != 0 else randrange(1, max_vehicles + 1, 1)
-                    route_id = traci.vehicle.getRouteID(veh) if len(veh_ids) != 0 else choice(loaded_routes)
+                    while needed_vehicles < 0:
+                        # add vehicles
+                        veh = veh_ids.pop(0) if len(veh_ids) != 0 else randrange(1, max_vehicles + 1, 1)
+                        route_id = traci.vehicle.getRouteID(veh) if len(veh_ids) != 0 else choice(loaded_routes)
 
-                    # new_id = datetime.datetime.today().timestamp()
-                    new_id = time.time()
-                    print("[TRACI] added vehicle id: %s_%s" % (str(veh), str(new_id)))
-                    # print("[TRACI] added vehicle route id", str(route_id))
-                    traci.vehicle.add(
-                        vehID='%s_%s' % (str(veh), str(new_id)),
-                        routeID=route_id,
-                        typeID=choices(emission_classes, weights=emission_weights)[0]
-                    )
-                    needed_vehicles += 1
-            current_step += 1
-
-        traci.close()
-        sys.stdout.flush()
-        return
+                        # new_id = datetime.datetime.today().timestamp()
+                        new_id = time.time()
+                        print("[TRACI] added vehicle id: %s_%s" % (str(veh), str(new_id)))
+                        # print("[TRACI] added vehicle route id", str(route_id))
+                        traci.vehicle.add(
+                            vehID='%s_%s' % (str(veh), str(new_id)),
+                            routeID=route_id,
+                            typeID=choices(emission_classes, weights=emission_weights)[0]
+                        )
+                        needed_vehicles += 1
+                current_step += 1
+        except Exception as e:
+            raise Exception('[SUMO] An error occurred while running the simulation: %s' % str(e))
+        finally:
+            traci.close()
+            sys.stdout.flush()
+            return
 
     async def start_single(self):
         raw = await get_raw_emissions_from_sim(self.db, self.sim_id)
