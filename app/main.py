@@ -5,7 +5,7 @@ from .api.routes import router as api_router
 from .db.mongodb_utils import connect_to_mongo, close_mongo_connection
 
 
-app = FastAPI(title="KoAirY API", docs_url="/koairy/api/docs")
+app = FastAPI(title="KoAirY API", docs_url="/koairy/api/docs", openapi_url="/koairy/api/openapi.json")
 
 app.add_middleware(CORSMiddleware, allow_origins="*", allow_methods=["*"], allow_headers=["*"])
 
