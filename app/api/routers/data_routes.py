@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import datetime
 
-from ...crud.bremicker import get_current_bremicker_by_time, get_latest_bremicker_by_box_id
+from ...crud.bremicker import get_current_bremicker_by_time, get_latest_bremicker_by_box_id, fetch_latest_bremicker
 from ...crud.hawa_dawa import fetch_latest_air
 from ...tools.simulation.parse_emission import Parser
 # from ...tools.predictor.lin_reg import LinReg
@@ -72,29 +72,25 @@ async def compare_traffic(inputs: PredictionInput = example_prediction_input, db
 @router.get('/bremicker/current')
 async def get_current_bremicker(boxID, db: AsyncIOMotorClient=Depends(get_database)):
     try:
-        time = datetime.datetime.today().strftime('%H:%M')
-        df_traffic = await get_latest_bremicker_by_box_id(db, box_id=boxID)
+        # time = datetime.datetime.today().strftime('%H:%M')
+        df_traffic = await fetch_latest_bremicker(db)
         if df_traffic is not None:
-            # df_traffic = df_traffic[int(box_id)]
-            df_traffic.index = df_traffic.index.strftime("%Y-%m-%d %H:%M")
-            print(df_traffic)
-            return df_traffic.to_json(orient='index')
+            result = df_traffic[int(boxID)]
+            result.index = result.index.strftime("%Y-%m-%d %H:%M")
+            return result.to_json(orient='index')
         else:
             raise HTTPException(status_code=500, detail='Fetching of Bremicker Data unsuccessful')
     except Exception as e:
         raise HTTPException(status_code=500,
-                            detail="[HawaDawa] Fetching of current air quality unsuccessful: %s" % str(e))
+                            detail="[Bremicker] Fetching of current air quality unsuccessful: %s" % str(e))
 
 @router.get('/air/current')
 async def get_current_air(db: AsyncIOMotorClient=Depends(get_database)):
-    # time = datetime.datetime.today().strftime('%H:%M')
     try:
         air = await fetch_latest_air(db)
         if air is not None:
-            # df_air.index = df_air.index.strftime("%Y-%m-%d %H:%M")
-            # return df_air.to_json(orient='index')
             return air
         else:
-            raise HTTPException(status_code=500, detail='Fetching of Bremicker Data unsuccessful')
+            raise HTTPException(status_code=500, detail='[HAWA DAWA] Fetching of current air quality unsuccessful')
     except Exception as e:
-        raise HTTPException(status_code=500, detail="[HawaDawa] Fetching of current air quality unsuccessful: %s" % str(e))
+        raise HTTPException(status_code=500, detail="[HAWA DAWA] Fetching of current air quality unsuccessful: %s" % str(e))
