@@ -12,10 +12,10 @@ from ..core.config import (
 )
 
 
-async def fetch_latest_bremicker(db, start_hour, end_hour):
+async def fetch_latest_bremicker(db, start_hour=None, end_hour=None):
     df_traffic = await get_current_bremicker_by_time(db, start_hour=start_hour, end_hour=end_hour)
     # if there are 2 hours or less (around midnight) take yesterday!
-    if df_traffic.shape[0] < 3:
+    if df_traffic is None or df_traffic.shape[0] < 3:
         yesterday = datetime.datetime.strftime(datetime.datetime.now() - timedelta(1), '%Y-%m-%d')
         df_traffic = await get_current_bremicker_by_time(db, start_date=yesterday, start_hour=start_hour,
                                                          end_hour=end_hour)
@@ -60,7 +60,6 @@ async def get_current_bremicker_by_time(conn: AsyncIOMotorClient, start_date=Non
     if bremicker is not None:
         df_traffic = pd.DataFrame(pd.read_json(bremicker))
         df_traffic.index.name = 'time'
-        print(df_traffic)
         if start_hour is None or end_hour is None:
             return df_traffic
         else:
@@ -127,7 +126,8 @@ async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end
     try:
         response = requests.get(BREMICKER_URL, params=params)
         response = response.json()
-        # print(response)
+        if len(response) == 0:
+            return None
         response = await format_bremicker(response)
         # await insert_bremicker(conn, start_date, response)
         # print(response)
@@ -138,6 +138,7 @@ async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end
 
 
 async def format_bremicker(data):
+    print("[BREMICKER] Formatting data now")
     df = pd.DataFrame(data)
     df['time'] = df[['date', 'time']].apply(lambda x: pd.to_datetime(' '.join(x)), axis=1)
     df = df[['time', 'boxID', 'averageVelocity', 'entryVelocity']]
@@ -146,6 +147,7 @@ async def format_bremicker(data):
     df['time'] = df['time'].astype(str)
     df = df.groupby('boxID')[['time', 'veh']].apply(lambda x: dict(x.values)).to_json()
     # print(df)
+    # print("[BREMICKER] Successfully formatted data")
     return df
 
 

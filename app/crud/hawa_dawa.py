@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import datetime
+from datetime import timedelta
 import calendar
 import json
 # from bson.json_util import dumps
@@ -126,8 +127,8 @@ async def fetch_air_traffic(conn: AsyncIOMotorClient, date="2019-01-01"):
 async def fetch_latest_air(conn: AsyncIOMotorClient):
     response = await fetch_today_from_hawa_dawa()
     today = datetime.datetime.today()
+    yesterday = datetime.datetime.strftime(datetime.datetime.now() - timedelta(1), '%Y-%m-%d')
     today = today.replace(hour=0, minute=0, second=0, microsecond=0)
-    print(today)
     result = {}
     for feature in response['features']:
         if (feature['properties']['type'] == 'hawadawa') and feature['properties']['timeValueSeries']:
@@ -141,14 +142,16 @@ async def fetch_latest_air(conn: AsyncIOMotorClient):
                 frames.append(df_pol)
             df = pd.concat(frames, axis=1)
             mask = (df.index >= today)
-            df = df.loc[mask]
-            df.index = df.index.strftime("%Y-%m-%d %H:%M")
-            df = df.fillna(-999)
+            df_filtered = df.loc[mask]
+            if df_filtered.shape[0] < 3:
+                df_filtered = df.loc[(df.index >= yesterday)]
+            df_filtered.index = df_filtered.index.strftime("%Y-%m-%d %H:%M")
+            df_filtered = df_filtered.fillna(-999)
             lng, lat = feature['geometry']['coordinates']
             result[feature['properties']['internal_id']] = {
                 # 'id': feature['properties']['internal_id'],
                 'location': {'lat': lat, 'lng': lng},
-                'values': df.to_dict(orient='index'),
+                'values': df_filtered.to_dict(orient='index'),
                 'aqi': feature['properties']['AQI']
             }
     return result
@@ -180,11 +183,14 @@ async def fetch_today_from_hawa_dawa():
         'missing_value': -999,
         'crs': 'global'
     }
-    response = requests.get(HAWA_DAWA_URL, params=params)
-    if response:
-        return response.json()
-    else:
-        return {}
+    try:
+        response = requests.get(HAWA_DAWA_URL, params=params)
+        if response is not None:
+            return response.json()
+        else:
+            return {}
+    except Exception as e:
+        raise Exception("[HAWA DAWA] Fetching unsuccessful: %s" % str(e))
 
 ### NOTE: UTILITY FUNCTIONS
 def get_month_day_range(date):
