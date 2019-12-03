@@ -4,10 +4,10 @@ from .simulation_input import (SimulationInput, example_simulation_input)
 
 
 class PredictionInput(SimulationInput):
-    start_date: str = Schema('2019-08-01', description='Set a start date')
-    end_date: str = Schema('2019-11-10', description='Set an end date')
-    start_hour: str = Schema('7:00', description='Set a starting hour')
-    end_hour: str = Schema('10:00', description='Set an ending hour')
+    start_date: str = Schema('2019-08-01', description='Set a start date', alias="startDate")
+    end_date: str = Schema('2019-11-10', description='Set an end date', alias="endDate")
+    start_hour: str = Schema('7:00', description='Set a starting hour', alias="startHour")
+    end_hour: str = Schema('10:00', description='Set an ending hour', alias="endHour")
     input_keys: list = Schema(['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], description='Give a list of keys which will train your model')
     output_key: str = Schema('pm10', description='Give pollutant key you wish to predict')
     box_id: int = Schema(672, description='Specify the bremicker sensor location')

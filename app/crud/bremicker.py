@@ -22,7 +22,7 @@ async def fetch_latest_bremicker(db, start_hour, end_hour):
     return df_traffic
 
 
-async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-09-01', end_date='2019-09-30'):
+async def get_bremicker(conn: AsyncIOMotorClient, start_date='2019-08-01', end_date='2019-12-01'):
     data = await conn[database_name][bremicker_collection_name].find_one({}, projection={"_id": False})
     if not data:
         print('[BREMICKER] No data in db. Fetching from server')
@@ -101,7 +101,7 @@ async def fetch_bremicker(conn: AsyncIOMotorClient, start_date='2019-06-20', end
         await insert_bremicker(conn, start_date, response)
     except JSONDecodeError as error:
         print('error in json decoding: %s' % error)
-        raise Exception('Error while decoding bremicker response...')
+        raise Exception('Error while decoding bremicker response: %s' % error)
     except Exception as e:
         raise Exception('Error while fetching bremicker: %s ' % str(e))
     else:
@@ -113,7 +113,6 @@ async def fetch_current_bremicker(conn: AsyncIOMotorClient, start_date=None, end
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     else:
         start_date = datetime.date.today()
-
     if end_date is not None:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
     else:
