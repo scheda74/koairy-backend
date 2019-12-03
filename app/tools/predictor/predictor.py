@@ -22,13 +22,15 @@ class Predictor(object):
         db,
         prediction_params: PredictionInput = example_prediction_input,
         sim_id=None,
-        df_traffic=None
+        df_traffic=None,
+        is_single_sim=True
     ):  
         self.db = db
         self.sim_id = sim_id
-        self.df_traffic=df_traffic
+        self.df_traffic = df_traffic
         self.predictionModel = prediction_params.predictionModel
         self.prediction_params = prediction_params
+        self.is_single_sim = is_single_sim
     
     async def predict_emissions(self):
         if self.predictionModel == 'lin-reg':
@@ -36,21 +38,24 @@ class Predictor(object):
                 self.prediction_params,
                 self.db,
                 self.sim_id,
-                self.df_traffic
+                self.df_traffic,
+                self.is_single_sim
             ).predict_emissions()
         elif self.predictionModel == 'lstm':
             return await LongShortTermMemoryRecurrentNeuralNetworkStrategy(
                 self.prediction_params,
                 self.db,
                 self.sim_id,
-                self.df_traffic
+                self.df_traffic,
+                self.is_single_sim
             ).predict_emissions()
         elif self.predictionModel == 'mlp':
             return await MLPRegressorStrategy(
                 self.prediction_params,
                 self.db,
                 self.sim_id,
-                self.df_traffic
+                self.df_traffic,
+                self.is_single_sim
             ).predict_emissions()
         elif self.predictionModel == 'cnn':
             print('cnn not yet specified, lin reg started')
@@ -72,7 +77,8 @@ class PredictorStrategyAbstract(object):
         prediction_params,
         db: AsyncIOMotorClient=Depends(get_database),
         sim_id=None,
-        df_traffic=None
+        df_traffic=None,
+        is_single_sim=True
     ):
         self.db = db
         self.sim_id = sim_id
@@ -85,6 +91,14 @@ class PredictorStrategyAbstract(object):
         self.end_date = prediction_params.end_date
         self.start_hour = prediction_params.start_hour
         self.end_hour = prediction_params.end_hour
+        self.is_single_sim = is_single_sim
+        self.mp = ModelPreProcessor(
+            db=self.db,
+            inputs=self.inputs,
+            sim_id=self.sim_id,
+            df_traffic=self.df_traffic,
+            is_single_sim=self.is_single_sim
+        )
 
 
     @abc.abstractmethod
@@ -95,8 +109,7 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
     async def predict_emissions(self):
         """Start Linear Regression Model Training and Prediction"""
         self.inputs.input_keys.append(self.inputs.box_id)
-        mp = ModelPreProcessor(db=self.db, inputs=self.inputs, sim_id=self.sim_id, df_traffic=self.df_traffic)
-        df_combined = await mp.aggregate_data(
+        df_combined = await self.mp.aggregate_data(
             self.box_id,
             self.start_date,
             self.end_date,
@@ -104,15 +117,16 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
             self.end_hour
         )
         print(df_combined)
-        rows = round(df_combined.shape[0] * 0.8)
+        # rows = round(df_combined.shape[0] * 0.8)
 
-        date_to_predict = pd.datetime.strptime(self.end_date + " 00:00", "%Y-%m-%d %H:%M")
-        date_to_predict = df_combined.index[df_combined.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
-
-        train_mask = (df_combined.index < date_to_predict)
-        df_train = df_combined.loc[train_mask]
-        predict_mask = (df_combined.index >= date_to_predict)
-        df_test = df_combined.loc[predict_mask]
+        # date_to_predict = pd.datetime.strptime(self.end_date + " 00:00", "%Y-%m-%d %H:%M")
+        # date_to_predict = df_combined.index[df_combined.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
+        #
+        # train_mask = (df_combined.index < date_to_predict)
+        # df_train = df_combined.loc[train_mask]
+        # predict_mask = (df_combined.index >= date_to_predict)
+        # df_test = df_combined.loc[predict_mask]
+        df_train, df_test = format_test_train_set(df_combined, self.end_date)
 
         model = LinearRegression()
         model.fit(df_train[self.input_keys], df_train[self.output_key])
@@ -120,12 +134,17 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
         # print('Intercept: \n', model.intercept_)
         # print('Coefficients: \n', model.coef_)
         df_test[self.output_key + '_predicted'] = model.predict(df_test[self.input_keys])
-        df_test['MeanAbsErr'] = str(
-            mean_absolute_error(df_test[self.output_key].to_numpy(),
-                                df_test['%s_predicted' % self.output_key].to_numpy()))
+        if self.output_key == 'no2':
+            sim_key = 'NOx'
+        else:
+            sim_key = 'PMx'
+        df_test[self.output_key + '_simulated'] = df_test[sim_key]
+        # df_test['MeanAbsErr'] = str(
+        #     mean_absolute_error(df_test[self.output_key].to_numpy(),
+        #                         df_test['%s_predicted' % self.output_key].to_numpy()))
         # print(df_test)
         # df_test = df_test.reset_index()
-        result = df_test[[self.output_key, '%s_predicted' % self.output_key]]
+        result = df_test[[self.output_key, '%s_predicted' % self.output_key, '%s_simulated' % self.output_key]]
         # print("Mean Abs Error LinReg: " + str(
         #     mean_absolute_error(result[self.output_key].to_numpy(),
         #                         result['%s_predicted' % self.output_key].to_numpy())))
@@ -138,17 +157,17 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
     async def predict_emissions(self):
         """Start MLP Model Training and Prediction"""
         self.inputs.input_keys.append(self.inputs.box_id)
-        mp = ModelPreProcessor(db=self.db, inputs=self.inputs, sim_id=self.sim_id)
-        df = await mp.aggregate_data()
+        # mp = ModelPreProcessor(db=self.db, inputs=self.inputs, sim_id=self.sim_id)
+        df = await self.mp.aggregate_data()
         # print('aggregated')
         # print(df)
-
-        rows = round(df.shape[0] * 0.8)
-        df_train = df.iloc[:rows]
-        df_test = df.iloc[rows:]
+        df_train, df_test = format_test_train_set(df, self.end_date)
+        # rows = round(df.shape[0] * 0.8)
+        # df_train = df.iloc[:rows]
+        # df_test = df.iloc[rows:]
         scaler = pre.StandardScaler()
-        train_scaled = scaler.fit_transform(df.iloc[:rows][self.input_keys])
-        test_scaled = scaler.fit_transform(df.iloc[rows:][self.input_keys])
+        train_scaled = scaler.fit_transform(df_train[self.input_keys])
+        test_scaled = scaler.fit_transform(df_test[self.input_keys])
 
         model = MLPRegressor(
             hidden_layer_sizes=(10,),
@@ -164,11 +183,15 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
         # df_test[output_key + '_mlp_predicted'] = model.predict(df_test[input_keys])
         df_test[self.output_key + '_predicted'] = model.predict(test_scaled)
         df_test = df_test[[self.output_key, '%s_predicted' % self.output_key]]
-        df_test['MeanAbsErr'] = str(
-            mean_absolute_error(df_test[self.output_key].to_numpy(), df_test['%s_predicted' % self.output_key].to_numpy())
-        )
-
-        result = df_test[[self.output_key, '%s_predicted' % self.output_key]]
+        # df_test['MeanAbsErr'] = str(
+        #     mean_absolute_error(df_test[self.output_key].to_numpy(), df_test['%s_predicted' % self.output_key].to_numpy())
+        # )
+        if self.output_key == 'no2':
+            sim_key = 'NOx'
+        else:
+            sim_key = 'PMx'
+        df_test[self.output_key + '_simulated'] = df_test[sim_key]
+        result = df_test[[self.output_key, '%s_predicted' % self.output_key, '%s_simulated' % self.output_key]]
         # print(result)
         print("Mean Abs Error MLP: " + str(
             mean_absolute_error(result[self.output_key].to_numpy(), result['%s_predicted' % self.output_key].to_numpy())))
@@ -196,3 +219,14 @@ class ConvolutionalNeuralNetworkStrategy(PredictorStrategyAbstract):
     async def predict_emissions(self):
         """check road and do sth"""
         return {}
+
+
+def format_test_train_set(df, end_date):
+    date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
+    date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
+
+    train_mask = (df.index < date_to_predict)
+    df_train = df.loc[train_mask]
+    predict_mask = (df.index >= date_to_predict)
+    df_test = df.loc[predict_mask]
+    return [df_train, df_test]

@@ -22,7 +22,8 @@ class ModelPreProcessor():
                 inputs: PredictionInput,
                 db: AsyncIOMotorClient=Depends(get_database),
                 sim_id=None,
-                df_traffic=None):
+                df_traffic=None,
+                is_single_sim=True):
         self.db = db
         self.sim_id = sim_id
         self.inputs = inputs
@@ -34,6 +35,7 @@ class ModelPreProcessor():
         self.start_hour = inputs.start_hour
         self.end_hour = inputs.end_hour
         self.df_traffic = df_traffic
+        self.is_single_sim = is_single_sim
 
         self.raw_emission_columns = ['CO', 'NOx', 'PMx']
 
@@ -205,11 +207,11 @@ class ModelPreProcessor():
                     inputs=self.inputs,
                     df_traffic=self.df_traffic
                 )
-                if self.df_traffic is not None:
-                    print("Starting SUMO...")
+                if self.is_single_sim:
+                    print("Starting single SUMO...")
                     await simulator.start_single()
                 else:
-                    print("Starting SUMO...")
+                    print("Starting overall SUMO...")
                     await simulator.start()
                 raw_emissions = await get_raw_emissions_from_sim(self.db, self.sim_id)
                 raw_emissions = pd.DataFrame(pd.read_json(raw_emissions["emissions"], orient='index'))
