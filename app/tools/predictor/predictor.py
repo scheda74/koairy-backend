@@ -12,7 +12,7 @@ from ...models.prediction_input import (PredictionInput, example_prediction_inpu
 
 from ...db.mongodb import AsyncIOMotorClient, get_database
 from fastapi import Depends
-
+import pandas as pd
 import abc
 
 
@@ -105,14 +105,20 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
         )
         print(df_combined)
         rows = round(df_combined.shape[0] * 0.8)
-        df_train = df_combined.iloc[:rows]
-        df_test = df_combined.iloc[rows:]
+
+        date_to_predict = pd.datetime.strptime(self.end_date + " 00:00", "%Y-%m-%d %H:%M")
+        date_to_predict = df_combined.index[df_combined.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
+
+        train_mask = (df_combined.index < date_to_predict)
+        df_train = df_combined.loc[train_mask]
+        predict_mask = (df_combined.index >= date_to_predict)
+        df_test = df_combined.loc[predict_mask]
 
         model = LinearRegression()
         model.fit(df_train[self.input_keys], df_train[self.output_key])
 
-        print('Intercept: \n', model.intercept_)
-        print('Coefficients: \n', model.coef_)
+        # print('Intercept: \n', model.intercept_)
+        # print('Coefficients: \n', model.coef_)
         df_test[self.output_key + '_predicted'] = model.predict(df_test[self.input_keys])
         df_test['MeanAbsErr'] = str(
             mean_absolute_error(df_test[self.output_key].to_numpy(),
@@ -120,9 +126,9 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
         # print(df_test)
         # df_test = df_test.reset_index()
         result = df_test[[self.output_key, '%s_predicted' % self.output_key]]
-        print("Mean Abs Error LinReg: " + str(
-            mean_absolute_error(result[self.output_key].to_numpy(),
-                                result['%s_predicted' % self.output_key].to_numpy())))
+        # print("Mean Abs Error LinReg: " + str(
+        #     mean_absolute_error(result[self.output_key].to_numpy(),
+        #                         result['%s_predicted' % self.output_key].to_numpy())))
         # self.save_df_to_plot(result[[output_key, '%s_lin_predicted' % output_key]], 'new_%s_lin_dist_prediction' % output_key)
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         return result

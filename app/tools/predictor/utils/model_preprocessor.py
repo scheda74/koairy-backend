@@ -1,6 +1,6 @@
 import numpy as np 
 import pandas as pd
-
+import datetime
 from fastapi import Depends
 from ....db.mongodb import AsyncIOMotorClient, get_database
 from ....crud.emissions import (
@@ -65,8 +65,10 @@ class ModelPreProcessor():
     ######################################################################################################
     ################################## DATA AGGREGATION FUNCTIONS ########################################
     ######################################################################################################
-    async def aggregate_data(self, box_id=672, start_date='2019-08-01', end_date='2019-11-10', start_hour='7:00', end_hour='10:00'):
+    async def aggregate_data(self, box_id=672, start_date='2019-08-01', end_date=None, start_hour='7:00', end_hour='10:00'):
         # box_id=int(box_id)
+        if end_date is None:
+            end_date = end_date = datetime.date.today().strftime("%Y-%m-%d")
         data = await get_aggregated_data_from_sim(self.db, self.sim_id)
         if data is not None:
             try:
@@ -192,9 +194,11 @@ class ModelPreProcessor():
         # print(lat, lng)
         raw_emissions = await get_raw_emissions_from_sim(db, sim_id)
         if raw_emissions is None:
+            print("[PARSER] Raw emissions not in db. Looking to parse the output files")
             parser = Parser(self.db, self.sim_id)
             raw_emissions = await parser.parse_emissions()
             if raw_emissions is None:
+                print("[PARSER] Output files don't exist. Starting simulation...")
                 simulator = Simulator(
                     db=self.db,
                     sim_id=self.sim_id,
