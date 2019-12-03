@@ -30,62 +30,6 @@ else:
 import sumolib
 
 
-# self.sim_id = sim_id
-# self.timesteps = timesteps
-# self.agents = agents
-# self.src_weights = src_weights
-# self.dst_weights = dst_weights
-# self.veh_dist = veh_dist
-# # self.weight_type = weight_type
-# self.fringe_factor = fringe_factor
-# self.new_net_path = new_net_path
-#
-# self.weights_filepath = WEIGHT_INPUT + "%s.src.xml" % self.sim_id
-# self.weights_filepath_prefix = WEIGHT_INPUT + self.sim_id
-# self.trip_filepath = TRIP_OUTPUT + self.sim_id + ".trip.xml"
-# self.route_filepath = ROUTE_OUTPUT + self.sim_id + ".rou.xml"
-# self.net_filepath = new_net_path if new_net_path != None else DEFAULT_NET_INPUT
-# self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
-# new_net_path=None,
-# timesteps=10800,
-# agents=9500,
-# src_weights={
-#     'aschheim_west': 0.1,
-#     'ebersberg_east': 0.37,
-#     'feldkirchen_west': 0.1,
-#     'heimstetten_industrial_1': 0.01,
-#     'heimstetten_industrial_2': 0.01,
-#     'heimstetten_residential': 0.18,
-#     'kirchheim_industrial_east': 0.01,
-#     'kirchheim_industrial_west': 0.01,
-#     'kirchheim_residential': 0.16,
-#     'unassigned_edges': 0.05
-# },
-# dst_weights={
-#     'aschheim_west': 0.16,
-#     'ebersberg_east': 0.07,
-#     'feldkirchen_west': 0.16,
-#     'heimstetten_industrial_1': 0.14,
-#     'heimstetten_industrial_2': 0.14,
-#     'heimstetten_residential': 0.06,
-#     'kirchheim_industrial_east': 0.06,
-#     'kirchheim_industrial_west': 0.11,
-#     'kirchheim_residential': 0.05,
-#     'unassigned_edges': 0.05
-# },
-# veh_dist={
-#     'HBEFA3/PC_D_EU2': 0.007,
-#     'HBEFA3/PC_D_EU3': 0.0251,
-#     'HBEFA3/PC_D_EU4': 0.0934,
-#     'HBEFA3/PC_D_EU5': 0.0890,
-#     'HBEFA3/PC_D_EU6': 0.1,
-#     'HBEFA3/PC_G_EU2': 0.0764,
-#     'HBEFA3/PC_G_EU3': 0.0342,
-#     'HBEFA3/PC_G_EU4': 0.1907,
-#     'HBEFA3/PC_G_EU5': 0.1802,
-#     'HBEFA3/PC_G_EU6': 0.163,
-#     'HBEFA3/PC_Alternative': 0.02
-# },
 class SimulationPreProcessor:
     def __init__(
         self,
@@ -281,22 +225,27 @@ class SimulationPreProcessor:
             vehicle.set('type', choice[0])
         tree.write(self.route_filepath)
 
-    def write_detector_add_file(self):
+    def write_detector_add_file(self, box_ids):
         detectors = []
-        lat = bremicker_boxes[self.box_id]['lat']
-        lng = bremicker_boxes[self.box_id]['lng']
-        xy_pos = self.net.convertLonLat2XY(lng, lat)
+        for box_id in box_ids:
+            lat = bremicker_boxes[box_id]['lat']
+            lng = bremicker_boxes[box_id]['lng']
+            xy_pos = self.net.convertLonLat2XY(lng, lat)
 
-        best_lane = self.get_lane_at_pos(xy_pos)
-        pos, d = best_lane.getClosestLanePosAndDist(xy_pos)
-        new_xy = best_lane.getBoundingBox()
+            best_lane = self.get_lane_at_pos(xy_pos)
+            pos, d = best_lane.getClosestLanePosAndDist(xy_pos)
+            new_xy = best_lane.getBoundingBox()
 
-        neighbor_lane = self.get_lane_at_pos(new_xy)
-        # neighbor_lane = best_lane.getNeigh()
-        neighbor_pos, neighbor_d = neighbor_lane.getClosestLanePosAndDist(new_xy)
+            neighbor_lane = self.get_lane_at_pos(new_xy)
+            # neighbor_lane = best_lane.getNeigh()
+            neighbor_pos, neighbor_d = neighbor_lane.getClosestLanePosAndDist(new_xy)
 
-        detectors.append(sumolib.sensors.inductive_loop.InductiveLoop('det_0', best_lane.getID(), pos, (self.timesteps / 3600), self.det_out_filepath))
-        detectors.append(sumolib.sensors.inductive_loop.InductiveLoop('det_1', neighbor_lane.getID(), neighbor_pos, (self.timesteps / 3600), self.det_out_filepath))
+            detectors.append(
+                sumolib.sensors.inductive_loop.InductiveLoop('det_%s_0' % box_id, best_lane.getID(), pos, (self.timesteps / 3600), self.det_out_filepath)
+            )
+            detectors.append(
+                sumolib.sensors.inductive_loop.InductiveLoop('det_%s_1' % box_id, neighbor_lane.getID(), neighbor_pos, (self.timesteps / 3600), self.det_out_filepath)
+            )
         sumolib.files.additional.write(self.add_filepath, detectors)
 
     def get_lane_at_pos(self, xy_pos):
@@ -324,6 +273,7 @@ class SimulationPreProcessor:
             self.write_weight_file(self.src_weights, 'src')  # create .src file
             self.write_weight_file(self.dst_weights, 'dst')  # create .dst file
             self.write_random_trips_and_routes()
+            self.write_detector_add_file(list(bremicker_boxes.keys()))
         elif not os.path.exists(self.cfg_filepath):
             self.write_sumocfg_file()
         else:
@@ -338,7 +288,7 @@ class SimulationPreProcessor:
                 not os.path.exists(self.add_filepath) or \
                 not os.path.exists(self.trip_filepath):
             self.write_sumocfg_file()
-            self.write_detector_add_file()
+            self.write_detector_add_file([self.box_id])
             self.write_random_trips_and_routes()
         else:
             print("[PreProcessor] routes and trip file already exists. Starting SUMO anyway...")

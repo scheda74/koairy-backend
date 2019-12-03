@@ -69,13 +69,15 @@ class Simulator:
             )
             # cfg_filepath = await processor.preprocess_simulation_input()
             self.cfg_filepath = await processor.preprocess_simulation_input()
-            sumoBinary = SUMO_COMMANDLINE
+            # sumoBinary = SUMO_COMMANDLINE
+            sumoBinary = SUMO_GUI
             sumoCMD = [
                 sumoBinary, 
                 "-c", self.cfg_filepath,
                 "--tripinfo-output", self.tripinfo_filepath,
                 '--fcd-output', self.fcdoutput_filepath, 
-                "--emission-output", self.emission_output_filepath
+                "--emission-output", self.emission_output_filepath,
+                "--additional-files", self.add_filepath
             ]
             if not os.path.exists(self.emission_output_filepath):
                 print(sumoCMD)
@@ -88,7 +90,7 @@ class Simulator:
             df = await parser.parse_emissions()
             return df.reset_index().to_json(orient='index')
 
-    async def run_update(self):
+    async def run_single(self):
         try:
             emission_classes = list(self.veh_dist.keys())
             emission_weights = list(self.veh_dist.values())
@@ -104,17 +106,17 @@ class Simulator:
                 if current_step > (self.timesteps * 1.2):
                     print("[SUMO] Simulation took to long. Aborting after %s simulated seconds" % str(current_step))
                     break
-                detected_vehicles += traci.inductionloop.getLastStepVehicleNumber("det_0")
-                detected_vehicles += traci.inductionloop.getLastStepVehicleNumber("det_1")
+                detected_vehicles += traci.inductionloop.getLastStepVehicleNumber("det_%s_0" % self.box_id)
+                detected_vehicles += traci.inductionloop.getLastStepVehicleNumber("det_%s_1" % self.box_id)
                 traci.simulationStep()
                 if current_step in detector_steps:
                     step = detector_steps.pop(0)
                     vehicle_threshold = self.df_traffic.loc[step][self.box_id]
-                    det_veh_number = traci.inductionloop.getLastStepVehicleNumber("det_1")
+                    det_veh_number = traci.inductionloop.getLastStepVehicleNumber("det_%s_1" % self.box_id)
                     print('simulated vehicle number at detector 1: %s' % str(det_veh_number))
                     needed_vehicles = detected_vehicles - vehicle_threshold
-                    veh_ids = list(traci.inductionloop.getLastStepVehicleIDs("det_0"))
-                    veh_ids += list(traci.inductionloop.getLastStepVehicleIDs("det_1"))
+                    veh_ids = list(traci.inductionloop.getLastStepVehicleIDs("det_%s_0" % self.box_id))
+                    veh_ids += list(traci.inductionloop.getLastStepVehicleIDs("det_%s_1" % self.box_id))
                     veh_ids = list(dict.fromkeys(veh_ids))
                     loaded_routes = traci.route.getIDList()
                     print('detected vehicles until now', detected_vehicles)
@@ -181,7 +183,7 @@ class Simulator:
             if not os.path.exists(self.emission_output_filepath):
                 print(sumoCMD)
                 traci.start(sumoCMD, 4041)
-                await self.run_update()
+                await self.run_single()
             else:
                 print("[SIMULATOR] Same simulation already exists. Parsing old file...")
             print("Parsing results...")
