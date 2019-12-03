@@ -19,9 +19,9 @@ MONGODB_URL = os.getenv("MONGODB_URL", "")  # deploying without docker-compose
 if not MONGODB_URL:
     MONGO_HOST = os.getenv("MONGO_HOST", "0.0.0.0")
     MONGO_PORT = int(os.getenv("MONGO_PORT", 27017))
-    MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root")
-    MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "example")
-    MONGO_DB = os.getenv("MONGO_DB", "fastapi")
+    MONGO_USER = os.getenv("MONGO_ROOT", "root")
+    MONGO_PASS = os.getenv("MONGO_PASSWORD", "example")
+    MONGO_DB = os.getenv("MONGO_DB", "mongo-db")
 
     MONGODB_URL = DatabaseURL(
         f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
@@ -84,7 +84,7 @@ VALID_AREA_IDS = {
 }
 
 
-database_name = MONGO_DB
+database_name = os.getenv("MONGO_DB", "mongo-db")
 caqi_emission_collection_name = "caqi_emissions"
 raw_emission_collection_name = "raw_emissions"
 bremicker_collection_name = "bremicker"
