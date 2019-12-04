@@ -16,7 +16,8 @@ from ...core.config import (
     VALID_AREA_IDS,
     RANDOM_TRIP_TOOL,
     TRAFFIC_INPUT_BASEDIR,
-    DET_OUT_BASEDIR
+    DET_OUT_BASEDIR,
+    ALL_DET_FILEPATH
 )
 # from ...models.prediction_input import PredictionInput
 # from ...models.simulation_input import SimulationInput
@@ -37,7 +38,8 @@ class SimulationPreProcessor:
         db,
         inputs,
         fringe_factor=1,
-        df_traffic=None
+        df_traffic=None,
+        is_single_sim=True
     ):
         self.db = db
         self.sim_id = sim_id
@@ -48,6 +50,7 @@ class SimulationPreProcessor:
         self.dst_weights = inputs.dstWeights
         self.fringe_factor = fringe_factor
         self.df_traffic = df_traffic
+        self.is_single_sim = is_single_sim
 
         if inputs.vehicleNumber is None:
             if self.df_traffic is None:
@@ -62,14 +65,16 @@ class SimulationPreProcessor:
         self.trip_filepath = TRIP_OUTPUT + self.sim_id + ".trip.xml"
         self.route_filepath = ROUTE_OUTPUT + self.sim_id + ".rou.xml"
         self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
-        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.sim_id
         self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.sim_id
 
-        new_net_path = NET_BASEDIR + "%s.net.xml" % self.box_id
-        if not os.path.exists(new_net_path):
+        if self.is_single_sim:
+            new_net_path = NET_BASEDIR + "%s.net.xml" % self.box_id
+            self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.sim_id
+        else:
             new_net_path = DEFAULT_NET_INPUT
-        self.net_filepath = new_net_path
+            self.add_filepath = ALL_DET_FILEPATH
 
+        self.net_filepath = new_net_path
         self.net = sumolib.net.readNet(self.net_filepath)
 
     def write_sumocfg_file(self):
@@ -93,6 +98,11 @@ class SimulationPreProcessor:
             input_tag,
             'gui-settings-file',
             {'value': 'gui-settings-origin-dest-vehicles.cfg'}
+        )
+        additional_file_tag = ET.SubElement(
+            input_tag,
+            'additional-files',
+            {'value': self.add_filepath}
         )
 
         time_tag = ET.SubElement(configuration_tag, 'time')
@@ -227,7 +237,9 @@ class SimulationPreProcessor:
 
     def write_detector_add_file(self, box_ids):
         detectors = []
+        print('writing detector file')
         for box_id in box_ids:
+            print('for box id %s ' % str(box_id))
             lat = bremicker_boxes[box_id]['lat']
             lng = bremicker_boxes[box_id]['lng']
             xy_pos = self.net.convertLonLat2XY(lng, lat)
@@ -252,6 +264,7 @@ class SimulationPreProcessor:
         # look 10m around the position
         lanes = self.net.getNeighboringLanes(xy_pos[0], xy_pos[1], 10)
         # attention, result is unsorted
+        print(lanes)
         best_lane = None
         ref_d = 9999.
         for lane, dist in lanes:
@@ -273,7 +286,7 @@ class SimulationPreProcessor:
             self.write_weight_file(self.src_weights, 'src')  # create .src file
             self.write_weight_file(self.dst_weights, 'dst')  # create .dst file
             self.write_random_trips_and_routes()
-            self.write_detector_add_file(list(bremicker_boxes.keys()))
+            # self.write_detector_add_file(list(bremicker_boxes.keys()))
         elif not os.path.exists(self.cfg_filepath):
             self.write_sumocfg_file()
         else:

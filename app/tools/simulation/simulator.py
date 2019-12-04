@@ -4,7 +4,16 @@ import time
 import json
 from random import randrange, choice, choices
 import pandas as pd
-from ...core.config import EMISSION_OUTPUT_BASE, SUMO_COMMANDLINE, SUMO_GUI, TRAFFIC_INPUT_BASEDIR, SUMO_CFG
+from ...core.config import (
+    EMISSION_OUTPUT_BASE,
+    SUMO_COMMANDLINE,
+    SUMO_GUI,
+    TRAFFIC_INPUT_BASEDIR,
+    SUMO_CFG,
+    NET_BASEDIR,
+    DEFAULT_NET_INPUT,
+    ALL_DET_FILEPATH
+)
 from ...crud.emissions import (get_caqi_emissions_for_sim, get_raw_emissions_from_sim)
 from .preprocessor import SimulationPreProcessor
 from .parse_emission import Parser
@@ -21,7 +30,7 @@ import traci
 
 
 class Simulator:
-    def __init__(self, db, inputs, sim_id, cfg_filepath=None, df_traffic=None):
+    def __init__(self, db, inputs, sim_id, cfg_filepath=None, df_traffic=None, is_single_sim=True):
         self.db = db
         self.sim_id = sim_id
         self.inputs = inputs
@@ -29,12 +38,13 @@ class Simulator:
         self.timesteps = inputs.timesteps
         self.vehicleNumber = inputs.vehicleNumber
         self.box_id = inputs.box_id
+        self.is_single_sim=is_single_sim
 
         self.tripinfo_filepath = EMISSION_OUTPUT_BASE + 'tripinfo_%s.xml' % self.sim_id
         self.fcdoutput_filepath = EMISSION_OUTPUT_BASE + 'fcdoutput_%s.xml' % self.sim_id
         self.emission_output_filepath = EMISSION_OUTPUT_BASE + "emission_output_%s.xml" % self.sim_id
-        self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.sim_id
-        self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.box_id
+        # self.add_filepath = TRAFFIC_INPUT_BASEDIR + "%s.add.xml" % self.sim_id
+        # self.det_out_filepath = TRAFFIC_INPUT_BASEDIR + "det_%s.out.xml" % self.box_id
         self.df_traffic = df_traffic
 
         if cfg_filepath is not None:
@@ -65,7 +75,8 @@ class Simulator:
                 db=self.db,
                 sim_id=self.sim_id,
                 inputs=self.inputs,
-                df_traffic=self.df_traffic
+                df_traffic=self.df_traffic,
+                is_single_sim=self.is_single_sim
             )
             # cfg_filepath = await processor.preprocess_simulation_input()
             self.cfg_filepath = await processor.preprocess_simulation_input()
@@ -76,8 +87,7 @@ class Simulator:
                 "-c", self.cfg_filepath,
                 "--tripinfo-output", self.tripinfo_filepath,
                 '--fcd-output', self.fcdoutput_filepath, 
-                "--emission-output", self.emission_output_filepath,
-                "--additional-files", self.add_filepath
+                "--emission-output", self.emission_output_filepath
             ]
             if not os.path.exists(self.emission_output_filepath):
                 print(sumoCMD)
@@ -165,7 +175,8 @@ class Simulator:
                 db=self.db,
                 sim_id=self.sim_id,
                 inputs=self.inputs,
-                df_traffic=self.df_traffic
+                df_traffic=self.df_traffic,
+                is_single_sim=self.is_single_sim
             )
             # cfg_filepath = await processor.preprocess_simulation_input()
             self.cfg_filepath = await processor.preprocess_single_simulation_input()
@@ -177,8 +188,7 @@ class Simulator:
                 "-c", self.cfg_filepath,
                 "--tripinfo-output", self.tripinfo_filepath,
                 '--fcd-output', self.fcdoutput_filepath,
-                "--emission-output", self.emission_output_filepath,
-                "--additional-files", self.add_filepath
+                "--emission-output", self.emission_output_filepath
             ]
             if not os.path.exists(self.emission_output_filepath):
                 print(sumoCMD)

@@ -205,7 +205,8 @@ class ModelPreProcessor():
                     db=self.db,
                     sim_id=self.sim_id,
                     inputs=self.inputs,
-                    df_traffic=self.df_traffic
+                    df_traffic=self.df_traffic,
+                    is_single_sim=self.is_single_sim
                 )
                 if self.is_single_sim:
                     print("Starting single SUMO...")

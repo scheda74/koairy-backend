@@ -45,6 +45,7 @@ DEFAULT_NET_INPUT = BASEDIR + "/data/traffic-input/net/road-network-default.net.
 NET_BASEDIR = BASEDIR + "/data/traffic-input/net/road-network_"
 TRAFFIC_INPUT_BASEDIR = BASEDIR + "/data/traffic-input/"
 DET_OUT_BASEDIR = BASEDIR + "/data/traffic-input/det_"
+ALL_DET_FILEPATH = BASEDIR + "/data/traffic-input/net/det.add.xml"
 AREA_OF_INTEREST = BASEDIR + "/data/traffic-input/areas-of-interest.taz.xml"
 TRIP_OUTPUT = BASEDIR + "/data/traffic-input/trip-"
 ROUTE_OUTPUT = BASEDIR + "/data/traffic-input/route-"
