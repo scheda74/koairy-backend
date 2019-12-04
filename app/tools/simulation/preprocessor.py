@@ -287,8 +287,8 @@ class SimulationPreProcessor:
             self.write_weight_file(self.dst_weights, 'dst')  # create .dst file
             self.write_random_trips_and_routes()
             # self.write_detector_add_file(list(bremicker_boxes.keys()))
-        elif not os.path.exists(self.cfg_filepath):
-            self.write_sumocfg_file()
+        # elif not os.path.exists(self.cfg_filepath):
+        #     self.write_sumocfg_file()
         else:
             print("[PreProcessor] weight, routes and trip file already exists. Starting SUMO anyway...")
         

@@ -4,6 +4,7 @@ import time
 import json
 from random import randrange, choice, choices
 import pandas as pd
+from ..predictor.utils.bremicker_boxes import bremicker_boxes
 from ...core.config import (
     EMISSION_OUTPUT_BASE,
     SUMO_COMMANDLINE,
@@ -52,19 +53,90 @@ class Simulator:
         else:
             self.cfg_filepath = SUMO_CFG + self.sim_id + ".sumocfg"
 
+    # async def run(self):
+    #     current_step = 0
+    #     while traci.simulation.getMinExpectedNumber() > 0:
+    #         if current_step > (self.timesteps * 1.2):
+    #             break
+    #         traci.simulationStep()
+    #         current_step += 1
+    #     traci.close()
+    #     sys.stdout.flush()
+    #     return
+
     async def run(self):
+        # try:
+        emission_classes = list(self.veh_dist.keys())
+        emission_weights = list(self.veh_dist.values())
+        box_ids = list(bremicker_boxes.keys())
+
+        detector_steps = [step * 600 for step in range(0, int(self.timesteps / 600) + 1)]
+        self.df_traffic = self.df_traffic.fillna(0)
+        self.df_traffic = self.df_traffic.reset_index()
+        self.df_traffic = self.df_traffic[box_ids]
+        self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 600)
+        print('traffic:', self.df_traffic)
+        print('detector steps:', detector_steps)
         current_step = 0
+        detected_vehicles = {}
         while traci.simulation.getMinExpectedNumber() > 0:
             if current_step > (self.timesteps * 1.2):
+                print("[SUMO] Simulation took to long. Aborting after %s simulated seconds" % str(current_step))
                 break
+
+            for box_id in box_ids:
+                if box_id in detected_vehicles:
+                    detected_vehicles[box_id] += traci.inductionloop.getLastStepVehicleNumber("det_%s_0" % box_id) + traci.inductionloop.getLastStepVehicleNumber("det_%s_1" % box_id)
+                else:
+                    detected_vehicles[box_id] = traci.inductionloop.getLastStepVehicleNumber("det_%s_0" % box_id) + traci.inductionloop.getLastStepVehicleNumber("det_%s_1" % box_id)
+            # print(detected_vehicles)
             traci.simulationStep()
+            if current_step in detector_steps:
+                step = detector_steps.pop(0)
+                for box_id in box_ids:
+                    max_vehicles = self.df_traffic[box_id].max()
+                    vehicle_threshold = self.df_traffic.loc[step][box_id]
+                    needed_vehicles = detected_vehicles[box_id] - vehicle_threshold
+                    veh_ids = list(traci.inductionloop.getLastStepVehicleIDs("det_%s_0" % box_id))
+                    veh_ids += list(traci.inductionloop.getLastStepVehicleIDs("det_%s_1" % box_id))
+                    veh_ids = list(dict.fromkeys(veh_ids))
+                    loaded_routes = traci.route.getIDList()
+                    print('detected vehicles until now', detected_vehicles)
+                    print('current step: ', step)
+                    print('vehicle number too much/low: needed vehicles: %s' % str(needed_vehicles))
+
+                    # while needed_vehicles > 0:
+                    #     #remove vehicles
+                    #     veh = veh_ids.pop(0)
+                    #     # print("[TRACI] removed vehicle %s" % veh)
+                    #     traci.vehicle.remove(veh)
+                    #     needed_vehicles -= 1
+
+                    while needed_vehicles < 0:
+                        # add vehicles
+                        veh = veh_ids.pop(0) if len(veh_ids) != 0 else randrange(1, max_vehicles + 1, 1)
+                        route_id = traci.vehicle.getRouteID(veh) if len(veh_ids) != 0 else choice(loaded_routes)
+
+                        # new_id = datetime.datetime.today().timestamp()
+                        new_id = time.time()
+                        # print("[TRACI] added vehicle id: %s_%s" % (str(veh), str(new_id)))
+                        # print("[TRACI] added vehicle route id", str(route_id))
+                        traci.vehicle.add(
+                            vehID='%s_%s' % (str(veh), str(new_id)),
+                            routeID=route_id,
+                            typeID=choices(emission_classes, weights=emission_weights)[0]
+                        )
+                        needed_vehicles += 1
+                    detected_vehicles[box_id] = 0
             current_step += 1
+        # except Exception as e:
+        #     raise Exception('[SUMO] An error occurred while running the simulation: %s' % str(e))
+        # finally:
         traci.close()
         sys.stdout.flush()
         return
 
     async def start(self):
-        # caqi = await get_caqi_emissions_for_sim(self.db, self.sim_id)
         raw = await get_raw_emissions_from_sim(self.db, self.sim_id)
         if raw is not None:
             print("[PARSER] Simulation has already been run. Fetching Data from DB...")
