@@ -142,7 +142,8 @@ async def format_bremicker(data):
     df = pd.DataFrame(data)
     df['time'] = df[['date', 'time']].apply(lambda x: pd.to_datetime(' '.join(x)), axis=1)
     df = df[['time', 'boxID', 'averageVelocity', 'entryVelocity']]
-    df = df.groupby(['boxID', pd.Grouper(key='time', freq='H')]).size()
+    df = df.groupby(['boxID', pd.Grouper(key='time', freq='10Min')]).size()
+    # df = df.groupby(['boxID', pd.Grouper(key='time', freq='H')]).size()
     df = df.reset_index().rename(columns={0: 'veh'})
     df['time'] = df['time'].astype(str)
     df = df.groupby('boxID')[['time', 'veh']].apply(lambda x: dict(x.values)).to_json()
