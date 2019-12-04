@@ -43,7 +43,7 @@
     <e1Detector id="det_670_0" lane="477543784#1_0" pos="50.70" freq="600.00" file="det.out.xml"/>
     <e1Detector id="det_670_1" lane="-477543784#1_0" pos="119.76" freq="600.00" file="det.out.xml"/>
     <e1Detector id="det_671_0" lane="421617196_0" pos="32.49" freq="600.00" file="det.out.xml"/>
-    <e1Detector id="det_671_1" lane="-421617196_0" pos="7.05" freq="900.00" file="det.out.xml"/>
+    <e1Detector id="det_671_1" lane="-421617196_0" pos="7.05" freq="600.00" file="det.out.xml"/>
     <e1Detector id="det_672_0" lane="-4294652#1_0" pos="54.68" freq="600.00" file="det.out.xml"/>
     <e1Detector id="det_672_1" lane="4294652#1_0" pos="50.15" freq="600.00" file="det.out.xml"/>
 </additional>
