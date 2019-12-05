@@ -8,7 +8,7 @@ class SimulationInput(BaseModel):
     srcWeights: Dict[str, float] = Schema(None, description='Percentage of how many vehicles (agents) start from an area')
     dstWeights: Dict[str, float] = Schema(None, description='Percentage of how many vehicles (agents) end in an area')
     vehicleNumber: int = Schema(None, description="Specify number of vehicles")
-    box_id: int = Schema(672, description="Specify bremicker box id")
+    box_id: int = Schema(672, description="Specify bremicker box id", alias='boxID')
     timesteps: int = Schema(10800, description="Seconds of simulation, default 10800s => 3 hours")
     start_hour: str = Schema('07:00', description='Select sensor location', alias="startHour")
     end_hour: str = Schema('10:00', description='Select sensor location', alias="endHour")

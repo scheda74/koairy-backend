@@ -8,9 +8,9 @@ class PredictionInput(SimulationInput):
     end_date: str = Schema('2019-11-10', description='Set an end date', alias="endDate")
     start_hour: str = Schema('7:00', description='Set a starting hour', alias="startHour")
     end_hour: str = Schema('10:00', description='Set an ending hour', alias="endHour")
-    input_keys: list = Schema(['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'], description='Give a list of keys which will train your model')
-    output_key: str = Schema('pm10', description='Give pollutant key you wish to predict')
-    box_id: int = Schema(672, description='Specify the bremicker sensor location')
+    input_keys: list = Schema(['temp', 'hum', 'WIND_SPEED', 'WIND_DIR'], description='Give a list of keys which will train your model', alias='inputKeys')
+    output_keys: list = Schema(['pm10', 'no2'], description='Specify pollutant key you wish to predict', alias='outputKeys')
+    box_id: int = Schema(672, description='Specify the bremicker sensor location', alias='boxID')
     predictionModel: str = Schema('lstm', description='Specify what ML model should be used.')
     temp: int = Schema(15, description='Specify temperature. If none given current weather data will be used')
     hum: int = Schema(90, description='Specify relative humidity. If none given current weather data will be used')
@@ -66,8 +66,8 @@ example_prediction_input = Body(
         'end_date': '2019-11-10',
         'start_hour': '7:00',
         'end_hour': '10:00',
-        'input_keys': ['temp', 'hum', 'PMx', 'WIND_SPEED', 'WIND_DIR'],
-        'output_key': 'pm10',
+        'input_keys': ['temp', 'hum', 'WIND_SPEED', 'WIND_DIR'],
+        'output_key': ['pm10', 'no2'],
         'box_id': 672,
         'predictionModel': 'lin-reg'
     }

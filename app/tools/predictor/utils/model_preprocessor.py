@@ -29,7 +29,7 @@ class ModelPreProcessor():
         self.inputs = inputs
         self.box_id = inputs.box_id
         self.input_keys = inputs.input_keys
-        self.output_key = inputs.output_key
+        # self.output_key = inputs.output_key
         self.start_date = inputs.start_date
         self.end_date = inputs.end_date
         self.start_hour = inputs.start_hour
