@@ -51,7 +51,7 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None
             df = df.set_index('time')
             result.append(df)
         df = pd.concat(result).fillna(0)
-        print(df)
+        # print(df)
         return df
     except Exception as e:
         raise HTTPException(status_code=500, detail='[BREMICKER] Error in fetching from db: %s' % str(e))

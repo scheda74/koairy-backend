@@ -23,7 +23,8 @@ async def get_current_bremicker(boxID, db: AsyncIOMotorClient=Depends(get_databa
     try:
         df_traffic = await get_bremicker_by_time(db, box_id=int(boxID), grouper_freq='H')
         if df_traffic is not None:
-            return df_traffic.to_json(orient='index')
+            result = df_traffic[int(boxID)]
+            return result.to_json(orient='index')
         else:
             raise HTTPException(status_code=500, detail='[BREMICKER] Fetching resulted in None Object')
     except Exception as e:
