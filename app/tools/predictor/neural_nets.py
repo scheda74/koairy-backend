@@ -1,14 +1,14 @@
 import numpy as np 
 import pandas as pd
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import datetime
 import json
 import math
-from app.core.config import (
+from ...core.config import (
     PLOT_BASEDIR
 )
 from fastapi import Depends
-from app.db.mongodb import AsyncIOMotorClient, get_database
+from ...db.mongodb import AsyncIOMotorClient, get_database
 
 from keras.models import Sequential
 from keras.layers import Dense
@@ -43,16 +43,16 @@ class NeuralNet():
         box_id = int(box_id)
         input_keys.append(box_id)
         df = await self.mp.aggregate_data(box_id, start_date, end_date, start_hour, end_hour)
-        data = df.copy()
-        data.index = data.index.strftime('%Y-%m-%d %H:%M')
-
-        # self.save_df_to_plot(df[['pm10', 'no2']], 'new_pollutant_compare')
-
+        # data = df.copy()
+        # data.index = data.index.strftime('%Y-%m-%d %H:%M')
+        #
+        # # self.save_df_to_plot(df[['pm10', 'no2']], 'new_pollutant_compare')
+        #
         # values = data.values
         # # specify columns to plot
         # groups = [0, 1, 2, 3, 5, 6, 7, 10, 11, 12, 13]
         # i = 1
-        # plot each column
+        # # plot each column
         # plt.figure(figsize=(20, 10))
         # for group in groups:
         #     plt.subplot(len(groups), 1, i)

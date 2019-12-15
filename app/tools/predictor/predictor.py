@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 from ...tools.predictor.neural_nets import NeuralNet
 
 from sklearn.linear_model import LinearRegression
@@ -45,6 +45,16 @@ class Predictor(object):
             result = []
             for key in self.output_keys:
                 result.append(await strategy.predict_emissions(key))
+
+            # plt.figure(figsize=(20, 10))
+            # df = pd.DataFrame.from_dict(result[1]['prediction']).transpose()
+            # df.index = pd.datetime.strptime(df.index, "%Y-%m-%d %H:%M")
+            # print(df)
+            # df.plot()
+            # plt.legend(loc='upper right')
+            # plt.show()
+            # plt.savefig(PLOT_BASEDIR + '/new_aggr_data')
+
             return result
         elif self.predictionModel == 'lstm':
             strategy = LongShortTermMemoryRecurrentNeuralNetworkStrategy(
@@ -69,6 +79,15 @@ class Predictor(object):
             result = []
             for key in self.output_keys:
                 result.append(await strategy.predict_emissions(key))
+
+            # plt.figure(figsize=(20, 10))
+            # df = pd.DataFrame.from_dict(result[1]['prediction']).transpose()
+            # df.index = pd.datetime.strptime(df.index, "%Y-%m-%d %H:%M")
+            # print(df)
+            # df.plot()
+            # plt.legend(loc='upper right')
+            # plt.show()
+
             return result
         elif self.predictionModel == 'cnn':
             print('cnn not yet specified, lin reg started')
@@ -138,7 +157,7 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
             self.start_hour,
             self.end_hour
         )
-        print(df_combined)
+        # print(df_combined)
 
         df_train, df_test = format_test_train_set(df_combined, self.end_date)
 
@@ -174,7 +193,14 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
             input_keys.append('PMx')
         self.inputs.input_keys.append(self.inputs.box_id)
         # mp = ModelPreProcessor(db=self.db, inputs=self.inputs, sim_id=self.sim_id)
-        df = await self.mp.aggregate_data()
+        df = await self.mp.aggregate_data(
+            self.box_id,
+            self.start_date,
+            self.end_date,
+            self.start_hour,
+            self.end_hour
+        )
+        # print(df)
         df_train, df_test = format_test_train_set(df, self.end_date)
 
         scaler = pre.StandardScaler()
@@ -194,7 +220,7 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
 
         # df_test[output_key + '_mlp_predicted'] = model.predict(df_test[input_keys])
         df_test[output_key + '_predicted'] = model.predict(test_scaled)
-        df_test = df_test[[output_key, '%s_predicted' % output_key]]
+        # df_test = df_test[[output_key, '%s_predicted' % output_key]]
         # df_test['MeanAbsErr'] = str(
         #     mean_absolute_error(df_test[output_key].to_numpy(), df_test['%s_predicted' % output_key].to_numpy())
         # )
@@ -202,15 +228,17 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
             sim_key = 'NOx'
         else:
             sim_key = 'PMx'
-        df_test[output_key + '_simulated'] = df_test[sim_key]
+        df_test = df_test.rename(columns={sim_key: output_key + '_simulated'})
+        # df_test[output_key + '_simulated'] = df_test[sim_key]
         result = df_test[[output_key, '%s_predicted' % output_key, '%s_simulated' % output_key]]
         # print(result)
-
         mea = mean_absolute_error(result[output_key].to_numpy(), result['%s_predicted' % output_key].to_numpy())
         # self.save_df_to_plot(result[[output_key, '%s_mlp_predicted' % output_key]], 'new_%s_mlp_dist_regressor' % output_key.replace('.', '-'))
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
-        result = result.to_json(orient='index')
-        return {mea: mea, [output_key]: result}
+        # print(result)
+        max_key = result.idxmax(axis=1).iloc[0]
+        result = result.to_dict(orient='index')
+        return {'key': output_key, 'mea': mea, 'prediction': result, 'maxKey': max_key}
 
 
 class LongShortTermMemoryRecurrentNeuralNetworkStrategy(PredictorStrategyAbstract):
@@ -240,11 +268,15 @@ class ConvolutionalNeuralNetworkStrategy(PredictorStrategyAbstract):
 
 
 def format_test_train_set(df, end_date):
-    date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
-    date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
-
-    train_mask = (df.index < date_to_predict)
-    df_train = df.loc[train_mask]
-    predict_mask = (df.index >= date_to_predict)
-    df_test = df.loc[predict_mask]
+    # date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
+    # date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
+    #
+    # train_mask = (df.index < date_to_predict)
+    # df_train = df.loc[train_mask]
+    # predict_mask = (df.index >= date_to_predict)
+    # df_test = df.loc[predict_mask]
+    # return [df_train, df_test]
+    rows = round(df.shape[0] * 0.8)
+    df_train = df.iloc[:rows]
+    df_test = df.iloc[rows:]
     return [df_train, df_test]

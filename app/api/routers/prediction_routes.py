@@ -18,13 +18,13 @@ async def start_prediction(inputs: PredictionInput = example_prediction_input, d
     """
     Training and prediction using a Long-Short-Term-Memory Recurrent Neural Network
     """
-    sim_id = generate_id(inputs)
     try:
         df_traffic = await fetch_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
         if inputs.vehicleNumber is None:
             inputs.vehicleNumber = df_traffic.sum(axis=1, skipna=True).sum(axis=0)
             print("Simulation with %s vehicles" % str(inputs.vehicleNumber))
-            # inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
+        sim_id = generate_id(inputs)
+        # print('sim id:', sim_id)
         return await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=False).predict_emissions()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

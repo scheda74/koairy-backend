@@ -46,6 +46,8 @@ async def get_bremicker_by_time(conn: AsyncIOMotorClient, box_id, start_date='20
         return None
     df_traffic.index.name = 'time'
     df = df_traffic.reset_index()[['time', box_id]]
+    df = df.groupby([pd.Grouper(key='time', freq='H')]).sum()
+    df = df.reset_index()
     mask = (df['time'] >= start_date) & (df['time'] <= end_date)
     df = df.loc[mask].set_index('time')
     return df.between_time(start_hour, end_hour)
