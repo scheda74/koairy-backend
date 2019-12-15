@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import datetime
 import pandas as pd
 
-from ...crud.bremicker import get_current_bremicker_by_time, get_latest_bremicker_by_box_id, fetch_latest_bremicker
+from ...crud.bremicker import get_bremicker, get_bremicker_by_time
 from ...crud.hawa_dawa import fetch_latest_air
 from ...tools.simulation.parse_emission import Parser
 from ...models.simulation_input import SimulationInput, example_simulation_input
@@ -18,72 +18,17 @@ from ...tools.predictor.utils.model_preprocessor import ModelPreProcessor
 router = APIRouter()
 
 
-# @router.post('/traffic/current')
-# async def get_traffic(inputs: SimulationInput = example_simulation_input, db: AsyncIOMotorClient=Depends(get_database)):
-#     """
-#     Returns CAQI values. If not available new simulation will be started
-#     """
-#     print(inputs)
-#     simulation_id = generate_id(inputs)
-#     print("[PARSER] Get CAQI data from simulation with id {simulation_id}")
-#     parser = Parser(db, simulation_id, inputs.box_id)
-#     return await parser.get_caqi_data()
-#
-# @router.post('/traffic')
-# async def get_training(inputs: PredictionInput = example_prediction_input, db: AsyncIOMotorClient=Depends(get_database)):
-#     sim_id = generate_id(inputs)
-#     df = await ModelPreProcessor(db, sim_id).aggregate_data(inputs.box_id, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
-#     df.index = df.index.strftime("%Y-%m-%d %H:%M")
-#     return df.to_json(orient='index')
-
-# @router.post('/get/caqi')
-# async def get_caqi(inputs: SimulationInput = example_simulation_input, db: AsyncIOMotorClient=Depends(get_database)):
-#     """
-#     Returns CAQI values. If not available new simulation will be started
-#     """
-#     print(inputs)
-#     simulation_id = generate_id(inputs)
-#     print("[PARSER] Get CAQI data from simulation with id {simulation_id}")
-#     parser = Parser(db, simulation_id, inputs.box_id)
-#     return await parser.get_caqi_data()
-#
-#
-# # @router.post('/get/sensors')
-# # async def get_sensors(db: AsyncIOMotorClient=Depends(get_database)):
-#     # lr = LinReg(db)
-#     # await lr.get_hw_data()
-#
-# @router.post('/simulation/compare')
-# async def compare_traffic(inputs: PredictionInput = example_prediction_input, db: AsyncIOMotorClient=Depends(get_database)):
-#     if inputs.vehicleNumber is None:
-#         df_traffic = await get_current_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
-#         inputs.vehicleNumber = df_traffic[inputs.box_id].sum() if df_traffic is not None else 1000
-#     sim_id = generate_single_id(inputs)
-#     processor = ModelPreProcessor(db, sim_id)
-#     # df = await processor.aggregate_data(inputs.box_id, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
-#     # print(df[[inputs.box_id, 'NOx', 'no2', 'PMx', 'pm10']])
-#     # df = df[[inputs.box_id, 'NOx', 'no2', 'PMx', 'pm10']]
-#     # df = df.rename(columns={inputs.box_id: '#vehicles'})
-#     # df.index = df.index.strftime("%Y-%m-%d %H:%M")
-#     # return df.to_dict(orient='index')
-#     df = await processor.aggregate_compare(inputs.box_id, inputs.start_date, inputs.end_date, inputs.start_hour, inputs.end_hour)
-#     return df.to_dict(orient='index')
-
 @router.get('/bremicker/current')
 async def get_current_bremicker(boxID, db: AsyncIOMotorClient=Depends(get_database)):
     try:
-        # time = datetime.datetime.today().strftime('%H:%M')
-        df_traffic = await fetch_latest_bremicker(db)
+        df_traffic = await get_bremicker_by_time(db, box_id=int(boxID), grouper_freq='H')
         if df_traffic is not None:
-            df_traffic = df_traffic.reset_index()
-            df_traffic = df_traffic.groupby([pd.Grouper(key='time', freq='H')]).sum()
             result = df_traffic[int(boxID)]
-            result.index = result.index.strftime("%Y-%m-%d %H:%M")
             return result.to_json(orient='index')
         else:
-            raise HTTPException(status_code=500, detail='Fetching of Bremicker Data unsuccessful')
+            raise HTTPException(status_code=500, detail='[BREMICKER] Fetching resulted in None Object')
     except Exception as e:
-        raise HTTPException(status_code=500, detail="[Bremicker] Fetching of current air quality unsuccessful: %s" % str(e))
+        raise HTTPException(status_code=500, detail="[BREMICKER] Fetching of current traffic unsuccessful: %s" % str(e))
 
 @router.get('/air/current')
 async def get_current_air(db: AsyncIOMotorClient=Depends(get_database)):
@@ -95,3 +40,16 @@ async def get_current_air(db: AsyncIOMotorClient=Depends(get_database)):
             raise HTTPException(status_code=500, detail='[HAWA DAWA] Fetching of current air quality unsuccessful')
     except Exception as e:
         raise HTTPException(status_code=500, detail="[HAWA DAWA] Fetching of current air quality unsuccessful: %s" % str(e))
+
+@router.get('/bremicker/test')
+async def get_current_air(db: AsyncIOMotorClient=Depends(get_database)):
+    # try:
+    # bremicker = await get_bremicker(db, start_date="2019-08-01", end_date="2019-12-10")
+    # bremicker = await get_bremicker(db)
+    bremicker = await get_bremicker_by_time(db, start_date="2019-12-11", end_date="2019-12-14", start_hour="7:00", end_hour="10:00", grouper_freq='H')
+    if bremicker is not None:
+        return bremicker.to_dict(orient='index')
+    else:
+        raise HTTPException(status_code=500, detail='[BREMICKER] Fetching of traffic data unsuccessful')
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail="[BREMICKER] Fetching of traffic data unsuccessful: %s" % str(e))

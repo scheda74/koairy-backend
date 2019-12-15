@@ -6,7 +6,7 @@ from ...tools.simulation.preprocessor import SimulationPreProcessor
 
 from ...models.simulation_input import SimulationInput, example_simulation_input
 from ...db.mongodb import AsyncIOMotorClient, get_database
-from ...crud.bremicker import fetch_latest_bremicker
+from ...crud.bremicker import get_bremicker_by_time
 from .utils import (generate_id, generate_single_id)
 
 router = APIRouter()
@@ -46,7 +46,10 @@ async def start_single_simulation(inputs: SimulationInput = example_simulation_i
     Starts a new simulation with given input parameters...
     """
     try:
-        df_traffic = await fetch_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
+        # df_traffic = await get_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
+
+        df_traffic = await get_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
+
         if inputs.vehicleNumber is None:
             inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
         sim_id = generate_single_id(inputs)
