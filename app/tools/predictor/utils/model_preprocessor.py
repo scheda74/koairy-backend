@@ -89,7 +89,7 @@ class ModelPreProcessor():
         df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
 
         df_air.index.name = 'time'
-        
+
         df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
         df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
         if df_sim.shape[0] == 0:
@@ -139,6 +139,7 @@ class ModelPreProcessor():
         df_formatted.index = df_formatted.index.strftime("%Y-%m-%d %H:%M")
         df_formatted = df_formatted.rename(columns={'pm2.5': 'pm25'})
         df_formatted.columns = df_formatted.columns.astype(str)
+        print(df_formatted)
         await insert_aggregated_data(self.db, self.sim_id, df_formatted.to_dict(orient='index'))
         return df_combined.dropna()
 
@@ -161,38 +162,39 @@ class ModelPreProcessor():
             i += 1
         plt.savefig(PLOT_BASEDIR + '/new_aggr_data')
 
-    async def aggregate_real_data(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
-        # box_id=int(box_id)
-        df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
-        df_air.index.name = 'time'
-
-        return df_air
-
-    async def aggregate_compare(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
-        # box_id=int(box_id)
-        df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
-        df_air.index.name = 'time'
-        print(df_air[['no2', 'pm10']])
-        df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
-        df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
-
-        # print(df_sim)
-        df_sim = df_sim.groupby(df_sim.index // 60)[self.raw_emission_columns].sum()
-        print(df_sim)
-        return df_sim
+    # async def aggregate_real_data(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
+    #     # box_id=int(box_id)
+    #     df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
+    #     df_air.index.name = 'time'
+    #
+    #     return df_air
+    #
+    # async def aggregate_compare(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
+    #     # box_id=int(box_id)
+    #     df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
+    #     df_air.index.name = 'time'
+    #     print(df_air[['no2', 'pm10']])
+    #     df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
+    #     df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
+    #
+    #     # print(df_sim)
+    #     df_sim = df_sim.groupby(df_sim.index // 60)[self.raw_emission_columns].sum()
+    #     print(df_sim)
+    #     return df_sim
         # return [df_air, df_sim]
 
     async def fetch_air_and_traffic(self, start_date='2019-08-01', end_date='2019-12-01', start_hour='7:00', end_hour='10:00'):
         # NOTE: Get real weather data and format it accordingly. Here we'll look at 2019 from 7:00 to 10:00
         df_traffic = await get_bremicker_by_time(
             self.db,
-            self.box_id,
-            self.start_date,
-            self.end_date,
-            self.start_hour,
-            self.end_hour
+            box_id=self.box_id,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            start_hour=self.start_hour,
+            end_hour=self.end_hour,
+            grouper_freq='H'
         )
-
+        df_traffic.index = pd.to_datetime(df_traffic.index)
         # df_traffic = df_traffic.loc[~df_traffic.duplicated(keep='first')]
         df_hawa = await get_hawa_dawa_by_time(
             self.db, 
@@ -240,8 +242,8 @@ class ModelPreProcessor():
         else:
             raw_emissions = pd.DataFrame(pd.read_json(raw_emissions["emissions"], orient='index'))
         df = raw_emissions
-        print(df)
+        # print(df)
         mask = (round(df['lat'], 3) == lat) & (round(df['lng'], 3) == lng)
         df = df.loc[mask]
-        print(df)
+        # print(df)
         return df.fillna(method='ffill')
