@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
+import asyncio
 from fastapi import Depends
 from ....core.config import PLOT_BASEDIR
 from ....db.mongodb import AsyncIOMotorClient, get_database
@@ -86,11 +87,13 @@ class ModelPreProcessor():
 
         print("[MODEL PREPROCESSOR] Aggregated data for simulation not found! Fetching from sources...")
         # df_air = await self.fetch_air_and_traffic(box_id, start_date, end_date, start_hour, end_hour)
-        df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
+        # df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
+        # df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
+        air_coroutine = self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
+        sim_coroutine = self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
+        df_air, df_sim = await asyncio.gather(air_coroutine, sim_coroutine)
 
         df_air.index.name = 'time'
-
-        df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
         df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
         if df_sim.shape[0] == 0:
             raise Exception('[MODEL PREPROCESSOR] simulation dataframe empty. Something went wrong')
@@ -185,7 +188,8 @@ class ModelPreProcessor():
 
     async def fetch_air_and_traffic(self, start_date='2019-08-01', end_date='2019-12-01', start_hour='7:00', end_hour='10:00'):
         # NOTE: Get real weather data and format it accordingly. Here we'll look at 2019 from 7:00 to 10:00
-        df_traffic = await get_bremicker_by_time(
+        # df_traffic = await get_bremicker_by_time(
+        traffic_coroutine = get_bremicker_by_time(
             self.db,
             box_id=self.box_id,
             start_date=self.start_date,
@@ -194,10 +198,11 @@ class ModelPreProcessor():
             end_hour=self.end_hour,
             grouper_freq='H'
         )
-        df_traffic.index = pd.to_datetime(df_traffic.index)
+
         # df_traffic = df_traffic.loc[~df_traffic.duplicated(keep='first')]
-        df_hawa = await get_hawa_dawa_by_time(
-            self.db, 
+        # df_hawa = await get_hawa_dawa_by_time(
+        hawa_coroutine = get_hawa_dawa_by_time(
+            self.db,
             self.start_date,
             self.end_date,
             self.start_hour,
@@ -206,9 +211,12 @@ class ModelPreProcessor():
         )
         # df_hawa = df_hawa.loc[~df_hawa.index.duplicated(keep='first')]
 
-        df_wind = await fetch_weather_data(start_date, end_date, start_hour, end_hour)
+        # df_wind = await fetch_weather_data(start_date, end_date, start_hour, end_hour)
+        wind_coroutine = fetch_weather_data(start_date, end_date, start_hour, end_hour)
         # df_wind = df_wind.loc[~df_wind.index.duplicated(keep='first')]
+        df_traffic, df_hawa, df_wind = await asyncio.gather(traffic_coroutine, hawa_coroutine, wind_coroutine)
 
+        df_traffic.index = pd.to_datetime(df_traffic.index)
         df = pd.concat([df_hawa, df_traffic, df_wind], axis=1)
         # .fillna(method='ffill').fillna(method='bfill')
         return df

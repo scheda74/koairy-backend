@@ -1,9 +1,10 @@
 import os
 import sys
 import subprocess
+import pandas as pd
 import xml.etree.ElementTree as ET
 from lxml import etree
-from random import choices
+from random import choices, randrange
 from ...tools.predictor.utils.bremicker_boxes import bremicker_boxes
 from ...core.config import (
     AREA_OF_INTEREST,
@@ -215,9 +216,33 @@ class SimulationPreProcessor:
                     self.weights_filepath_prefix
                 )
         subprocess.call(cmd.split())
-
+        # self.adjust_vehicle_departure()
         self.add_vehicle_type_to_routes()
-    
+
+    def adjust_vehicle_departure(self):
+        df_traffic = self.df_traffic.copy()
+        df_traffic = df_traffic.fillna(0)
+        df_traffic = df_traffic.reset_index()
+        df_traffic = df_traffic[bremicker_boxes.keys()]
+        df_traffic.index = pd.Series(df_traffic.index).apply(lambda z: z * 600)
+        detector_steps = [step * 600 for step in range(0, df_traffic.shape[0])]
+
+        tree = ET.parse(self.route_filepath)
+        root = tree.getroot()
+        for vehicle in root.iter('vehicle'):
+            for box_id in bremicker_boxes.keys():
+                box = bremicker_boxes[box_id]
+                for step in detector_steps:
+                    vehicle_threshold = df_traffic.loc[step][box_id]
+                    while vehicle_threshold >= 0:
+                        edges = vehicle.find('route').get('edges').split()
+                        if box['edge_1'] in edges or box['edge_2'] in edges:
+                            departure_time = randrange(step - 600, step, 1) if step != 0 else 0
+                            vehicle.set('depart', str(departure_time))
+                            print('%s vehicles left, at %s seconds' % (vehicle_threshold, departure_time))
+                        vehicle_threshold -= 1
+        tree.write(self.route_filepath)
+
     def add_vehicle_type_to_routes(self):
         emission_classes = list(self.veh_dist.keys())
         emission_weights = list(self.veh_dist.values())
