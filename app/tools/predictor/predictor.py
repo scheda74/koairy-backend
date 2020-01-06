@@ -48,6 +48,7 @@ class Predictor(object):
 
             # plt.figure(figsize=(20, 10))
             # df = pd.DataFrame.from_dict(result[1]['prediction']).transpose()
+            # print(df)
             # df.index = pd.datetime.strptime(df.index, "%Y-%m-%d %H:%M")
             # print(df)
             # df.plot()
@@ -170,11 +171,12 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
             sim_key = 'NOx'
         else:
             sim_key = 'PMx'
-        df_test[output_key + '_simulated'] = df_test[sim_key]
+        # df_test[sim_key + '_simulated'] = df_test[sim_key]
+        df_test = df_test.rename(columns={sim_key: sim_key + '_simulated'})
         # df_test['MeanAbsErr'] = str(
         #     mean_absolute_error(df_test[output_key].to_numpy(),
         #                         df_test['%s_predicted' % output_key].to_numpy()))
-        result = df_test[[output_key, '%s_predicted' % output_key, '%s_simulated' % output_key]]
+        result = df_test[[output_key, '%s_predicted' % output_key, '%s_simulated' % sim_key]]
         mea = mean_absolute_error(result[output_key].to_numpy(), result['%s_predicted' % output_key].to_numpy())
         # self.save_df_to_plot(result[[output_key, '%s_lin_predicted' % output_key]], 'new_%s_lin_dist_prediction' % output_key)
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
@@ -228,9 +230,9 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
             sim_key = 'NOx'
         else:
             sim_key = 'PMx'
-        df_test = df_test.rename(columns={sim_key: output_key + '_simulated'})
+        df_test = df_test.rename(columns={sim_key: sim_key + '_simulated'})
         # df_test[output_key + '_simulated'] = df_test[sim_key]
-        result = df_test[[output_key, '%s_predicted' % output_key, '%s_simulated' % output_key]]
+        result = df_test[[output_key, '%s_predicted' % output_key, '%s_simulated' % sim_key]]
         # print(result)
         mea = mean_absolute_error(result[output_key].to_numpy(), result['%s_predicted' % output_key].to_numpy())
         # self.save_df_to_plot(result[[output_key, '%s_mlp_predicted' % output_key]], 'new_%s_mlp_dist_regressor' % output_key.replace('.', '-'))
@@ -268,15 +270,15 @@ class ConvolutionalNeuralNetworkStrategy(PredictorStrategyAbstract):
 
 
 def format_test_train_set(df, end_date):
-    # date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
-    # date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
-    #
-    # train_mask = (df.index < date_to_predict)
-    # df_train = df.loc[train_mask]
-    # predict_mask = (df.index >= date_to_predict)
-    # df_test = df.loc[predict_mask]
-    # return [df_train, df_test]
-    rows = round(df.shape[0] * 0.8)
-    df_train = df.iloc[:rows]
-    df_test = df.iloc[rows:]
+    date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
+    date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
+
+    train_mask = (df.index < date_to_predict)
+    df_train = df.loc[train_mask]
+    predict_mask = (df.index >= date_to_predict)
+    df_test = df.loc[predict_mask]
     return [df_train, df_test]
+    # rows = round(df.shape[0] * 0.8)
+    # df_train = df.iloc[:rows]
+    # df_test = df.iloc[rows:]
+    # return [df_train, df_test]

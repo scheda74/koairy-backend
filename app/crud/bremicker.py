@@ -26,30 +26,33 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None
     else:
         end_date = datetime.datetime.today().date()
     end_date = datetime.datetime.combine(end_date, datetime.time.min)
-
+    print(start_date)
+    print(end_date)
     try:
         docs = await conn[database_name][bremicker_collection_name].count_documents({"$and": [{"measure_date": {"$gte": start_date}}, {"measure_date": {"$lte": end_date}}]})
         if docs == 0:
-            print('Fetching from %s to %s' % (start_date, end_date))
+            print('Fetching bremicker data from %s to %s from server' % (start_date, end_date))
             await fetch_bremicker(conn, start_date, end_date)
-
         result = []
         async for document in conn[database_name][bremicker_collection_name].find({"$and": [{"measure_date": {"$gte": start_date}}, {"measure_date": {"$lte": end_date}}]}):
-            if document is None:
+            if document is None or len(document['data']) == 0:
                 document = await fetch_bremicker(conn, document['measure_date'], document['measure_date'])
             # print(document)
-            print('fetching data from %s' % document['measure_date'].strftime('%Y-%m-%d'))
-            df = pd.DataFrame.from_dict(document['data'])
-            df['date'] = document['measure_date'].strftime('%Y-%m-%d')
-            df['time'] = df[['date', 'time']].apply(lambda x: pd.to_datetime(' '.join(x)), axis=1)
-            df = df.groupby([pd.Grouper(key='time', freq=grouper_freq), 'boxID']).size().reset_index()
-            df['time'] = df['time'].astype(str)
-            df = df.set_index('time').rename(columns={0: 'numberOfVehicles'})
-            df = df.reset_index()
-            # df = pd.pivot_table(df, index=['time'], values='numberOfVehicles', columns='boxID')
-            df = df.pivot(index='time', values='numberOfVehicles', columns='boxID').reset_index().rename_axis(None, axis=1)
-            df = df.set_index('time')
-            result.append(df)
+            try:
+                print('fetching data from %s' % document['measure_date'].strftime('%Y-%m-%d'))
+                df = pd.DataFrame.from_dict(document['data'])
+                df['date'] = document['measure_date'].strftime('%Y-%m-%d')
+                df['time'] = df[['date', 'time']].apply(lambda x: pd.to_datetime(' '.join(x)), axis=1)
+                df = df.groupby([pd.Grouper(key='time', freq=grouper_freq), 'boxID']).size().reset_index()
+                df['time'] = df['time'].astype(str)
+                df = df.set_index('time').rename(columns={0: 'numberOfVehicles'})
+                df = df.reset_index()
+                df = df.pivot(index='time', values='numberOfVehicles', columns='boxID').reset_index().rename_axis(None, axis=1)
+                df = df.set_index('time')
+                result.append(df)
+            except Exception as e:
+                print(str(e))
+                raise HTTPException(status_code=500, detail='[BREMICKER] Error in fetching from db: %s' % str(e))
         df = pd.concat(result).fillna(0)
         # print(df)
         return df
@@ -286,3 +289,36 @@ async def format_bremicker(data):
 #     df = pd.concat(result).fillna(0)
 #     print(df)
 #     return df
+
+
+# try:
+#     print('fetching data from %s' % document['measure_date'].strftime('%Y-%m-%d'))
+#     df = pd.DataFrame.from_dict(document['data'])
+#     df['date'] = document['measure_date'].strftime('%Y-%m-%d')
+#     df['time'] = df[['date', 'time']].apply(lambda x: pd.to_datetime(' '.join(x)), axis=1)
+#     # df = df.groupby([pd.Grouper(key='time', freq=grouper_freq), 'boxID']).size().reset_index()
+#     # df['time'] = df['time'].astype(str)
+#     # df = df.set_index('time').rename(columns={0: 'numberOfVehicles'})
+#     # df = df.reset_index()
+#     # print(df)
+#     # df = pd.pivot_table(df, index=['time'], values='numberOfVehicles', columns='boxID')
+#     # df = df.pivot(index='time', values='numberOfVehicles', columns='boxID').reset_index().rename_axis(None, axis=1)
+#     df = df.set_index('time')
+#     result.append(df)
+# except Exception as e:
+#     print(str(e))
+# try:
+#     df = pd.concat(result, sort=True).fillna(0)
+#     df = df.reset_index()
+#     # print(df)
+#     df = df.groupby([pd.Grouper(key='time', freq=grouper_freq), 'boxID']).size().reset_index()
+#     df = df.rename(columns={0: 'numberOfVehicles'})
+#     # print(df)
+#     df = df.reset_index()
+#     df = df.pivot(index='time', values='numberOfVehicles', columns='boxID').reset_index().rename_axis(None, axis=1)
+#     df['time'] = df['time'].astype(str)
+#     # print(df)
+#     return df
+# except Exception as e:
+#     print(str(e))
+#     raise HTTPException(status_code=500, detail='[BREMICKER] Error in fetching from db: %s' % str(e))

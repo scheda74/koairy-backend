@@ -22,7 +22,7 @@ async def start_prediction(inputs: PredictionInput = example_prediction_input, d
         # df_traffic = await get_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
         df_traffic = await get_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
         if inputs.vehicleNumber is None:
-            inputs.vehicleNumber = df_traffic.sum(axis=1, skipna=True).sum(axis=0)
+            inputs.vehicleNumber = round(df_traffic.sum(axis=1, skipna=True).sum(axis=0) * 1.25)
             print("Simulation with %s vehicles" % str(inputs.vehicleNumber))
         sim_id = generate_id(inputs)
         # print('sim id:', sim_id)

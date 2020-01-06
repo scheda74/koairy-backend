@@ -98,7 +98,7 @@ async def format_to_df(response, box_id=672):
                         df_pol = df_pol.set_index('time')
                         df_pol = df_pol.rename(columns={'value': pollutant})
                         frames.append(df_pol)
-                    months.append( pd.concat(frames, axis=1).dropna() )
+                    months.append(pd.concat(frames, axis=1, sort=True).dropna())
     result = pd.concat(months)
     # print(result)
     return result

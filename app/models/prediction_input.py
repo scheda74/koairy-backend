@@ -5,7 +5,7 @@ from .simulation_input import (SimulationInput, example_simulation_input)
 
 class PredictionInput(SimulationInput):
     start_date: str = Schema('2019-08-01', description='Set a start date', alias="startDate")
-    end_date: str = Schema('2019-11-10', description='Set an end date', alias="endDate")
+    end_date: str = Schema('2020-01-01', description='Set an end date', alias="endDate")
     start_hour: str = Schema('7:00', description='Set a starting hour', alias="startHour")
     end_hour: str = Schema('10:00', description='Set an ending hour', alias="endHour")
     input_keys: list = Schema(['temp', 'hum', 'WIND_SPEED', 'WIND_DIR'], description='Give a list of keys which will train your model', alias='inputKeys')
@@ -62,8 +62,8 @@ example_prediction_input = Body(
         'timesteps': 10800,
         'temp': 15,
         'hum': 90,
-        'start_date': '2019-08-01',
-        'end_date': '2019-11-10',
+        'startDate': '2019-08-01',
+        'endDate': '2020-01-04',
         'start_hour': '7:00',
         'end_hour': '10:00',
         'input_keys': ['temp', 'hum', 'WIND_SPEED', 'WIND_DIR'],

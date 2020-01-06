@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from fastapi import Depends
 from ....core.config import PLOT_BASEDIR
 from ....db.mongodb import AsyncIOMotorClient, get_database
@@ -80,6 +81,7 @@ class ModelPreProcessor():
                 df = pd.DataFrame.from_dict(data["aggregated"], orient='index')
                 df.index = pd.to_datetime(df.index)
                 df = df.rename(columns={str(self.box_id): self.box_id})
+                print(df)
                 # self.plot_aggr_data(df)
                 return df
             except Exception as e:
@@ -87,11 +89,11 @@ class ModelPreProcessor():
 
         print("[MODEL PREPROCESSOR] Aggregated data for simulation not found! Fetching from sources...")
         # df_air = await self.fetch_air_and_traffic(box_id, start_date, end_date, start_hour, end_hour)
-        # df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
-        # df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
-        air_coroutine = self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
-        sim_coroutine = self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
-        df_air, df_sim = await asyncio.gather(air_coroutine, sim_coroutine)
+        df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
+        df_sim = await self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
+        # air_coroutine = self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
+        # sim_coroutine = self.fetch_simulated_emissions(self.db, self.sim_id, self.box_id)
+        # df_air, df_sim = await asyncio.gather(air_coroutine, sim_coroutine)
 
         df_air.index.name = 'time'
         df_sim = df_sim.groupby('time')[self.raw_emission_columns].sum()
