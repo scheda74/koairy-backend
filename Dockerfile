@@ -32,7 +32,8 @@ ENV SUMO_HOME /sumo
 RUN sudo apt-get install -qq \
     python3-dev \
     python3-pip \
-    python3-rtree
+    python3-rtree \
+    python3-apt
 
 RUN apt-get -qq install python3.7 python3.7-dev curl python3-distutils && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3.7 get-pip.py
 RUN cp /usr/bin/python3.7 /usr/bin/python
@@ -41,7 +42,8 @@ WORKDIR /
 # Setting up poetry
 COPY poetry.lock /
 COPY pyproject.toml .
-RUN pip3 install poetry && \
+RUN pip3 install --upgrade keyrings && \
+    pip3 install poetry && \
     pip3 install --upgrade tensorflow && \
     poetry config settings.virtualenvs.create false && \
     poetry install -v

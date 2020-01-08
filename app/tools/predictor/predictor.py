@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import json
 from ...tools.predictor.neural_nets import NeuralNet
 
 from sklearn.linear_model import LinearRegression
@@ -10,6 +11,7 @@ from ...tools.predictor.utils.model_preprocessor import ModelPreProcessor
 
 from ...models.prediction_input import (PredictionInput, example_prediction_input)
 
+from ...crud.emissions import get_simulated_traffic_from_sim
 from ...db.mongodb import AsyncIOMotorClient, get_database
 from fastapi import Depends
 import pandas as pd
@@ -55,8 +57,10 @@ class Predictor(object):
             # plt.legend(loc='upper right')
             # plt.show()
             # plt.savefig(PLOT_BASEDIR + '/new_aggr_data')
-
-            return result
+            raw_emissions = await get_simulated_traffic_from_sim(self.db, self.sim_id)
+            raw_emissions = json.loads(raw_emissions['emissions'])
+            print(raw_emissions)
+            return {'prediction': result, 'traffic': raw_emissions}
         elif self.predictionModel == 'lstm':
             strategy = LongShortTermMemoryRecurrentNeuralNetworkStrategy(
                 self.prediction_params,
@@ -68,7 +72,8 @@ class Predictor(object):
             result = []
             for key in self.output_keys:
                 result.append(await strategy.predict_emissions(key))
-            return result
+            raw_emissions = await get_simulated_traffic_from_sim(self.db, self.sim_id)
+            return {'prediction': result, 'traffic': json.loads(raw_emissions['emissions'])}
         elif self.predictionModel == 'mlp':
             strategy = MLPRegressorStrategy(
                 self.prediction_params,
@@ -89,7 +94,10 @@ class Predictor(object):
             # plt.legend(loc='upper right')
             # plt.show()
 
-            return result
+            raw_emissions = await get_simulated_traffic_from_sim(self.db, self.sim_id)
+            raw_emissions = json.loads(raw_emissions['emissions'])
+            print(raw_emissions)
+            return {'prediction': result, 'traffic': raw_emissions}
         elif self.predictionModel == 'cnn':
             print('cnn not yet specified, lin reg started')
             strategy = LinearRegressionStrategy(
@@ -270,6 +278,7 @@ class ConvolutionalNeuralNetworkStrategy(PredictorStrategyAbstract):
 
 
 def format_test_train_set(df, end_date):
+    print("[MODEL PREPROCESSOR] end date to predict: " + end_date)
     date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
     date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
 

@@ -88,6 +88,7 @@ VALID_AREA_IDS = {
 database_name = os.getenv("MONGO_DB", "mongo-db")
 caqi_emission_collection_name = "caqi_emissions"
 raw_emission_collection_name = "raw_emissions"
+simulated_traffic_collection_name = "simulated_traffic"
 bremicker_collection_name = "bremicker"
 air_hawa_collection_name = "air_hawa"
 training_data_collection_name = "training"

@@ -18,7 +18,8 @@ from ...crud.emissions import (
     get_caqi_emissions_for_sim,
     get_raw_emissions_from_sim,
     insert_caqi_emissions,
-    insert_raw_emissions
+    insert_raw_emissions,
+    insert_simulated_traffic
 )
 from ...db.mongodb import AsyncIOMotorClient
 
@@ -79,6 +80,12 @@ class Parser:
         df.drop(coords, axis=1, inplace=True)
         # effectively creating areas of 1/10000th degrees per side
         latlng = ['lat', 'lng']
+        df_counter = df.copy()
+        df_counter = df_counter[latlng].round(4).groupby(latlng).size()
+        df_counter = df_counter.rename(columns={'0': 'count'})
+        simulated_traffic = df_counter.reset_index().to_json(orient='index')
+        await insert_simulated_traffic(self.db, self.sim_id, simulated_traffic)
+
         df[latlng] = df[latlng].round(3)
         # df[entries] = df[entries].resample('60s', how='sum')
         # df = df.groupby(['time', 'lat', 'lng'])[entries].sum()
