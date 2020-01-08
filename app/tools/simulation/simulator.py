@@ -152,8 +152,8 @@ class Simulator:
             )
             # cfg_filepath = await processor.preprocess_simulation_input()
             self.cfg_filepath = await processor.preprocess_simulation_input()
-            # sumoBinary = SUMO_COMMANDLINE
-            sumoBinary = SUMO_GUI
+            sumoBinary = SUMO_COMMANDLINE
+            # sumoBinary = SUMO_GUI
             sumoCMD = [
                 sumoBinary, 
                 "-c", self.cfg_filepath,
