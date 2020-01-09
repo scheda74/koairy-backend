@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import json
 from ...tools.predictor.neural_nets import NeuralNet
 

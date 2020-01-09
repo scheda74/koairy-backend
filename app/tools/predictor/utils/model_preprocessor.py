@@ -1,6 +1,6 @@
 import numpy as np 
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import datetime
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
@@ -158,14 +158,14 @@ class ModelPreProcessor():
         groups = [0, 1, 2, 3, 4, 5, 6, 10, 11]
         i = 1
         # plot each column
-        plt.figure(figsize=(20, 10))
-        plt.subplots(len(groups), sharex='all')
-        for group in groups:
-            plt.subplot(len(groups), 1, i)
-            plt.plot(values[:, group])
-            plt.title(data.columns[group], y=0.5, loc='right')
-            i += 1
-        plt.savefig(PLOT_BASEDIR + '/new_aggr_data')
+        # plt.figure(figsize=(20, 10))
+        # plt.subplots(len(groups), sharex='all')
+        # for group in groups:
+        #     plt.subplot(len(groups), 1, i)
+        #     plt.plot(values[:, group])
+        #     plt.title(data.columns[group], y=0.5, loc='right')
+        #     i += 1
+        # plt.savefig(PLOT_BASEDIR + '/new_aggr_data')
 
     # async def aggregate_real_data(self, box_id=672, start_date='2019-08-01', end_date='2019-10-20', start_hour='7:00', end_hour='10:00'):
     #     # box_id=int(box_id)
