@@ -61,6 +61,7 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None
 
 
 async def get_bremicker_by_time(conn: AsyncIOMotorClient, box_id=None, start_date=None, end_date=None, start_hour='0:00', end_hour='23:00', grouper_freq='10Min'):
+    print("[BREMICKER] start fetching bremicker")
     df = await get_bremicker(conn, start_date, end_date, grouper_freq=grouper_freq)
     if df is None or df.shape[0] < 3:
         yesterday = datetime.datetime.strftime(datetime.datetime.now() - timedelta(1), '%Y-%m-%d')
