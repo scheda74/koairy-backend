@@ -9,7 +9,7 @@ from ...models.prediction_input import (
 )
 from ...crud.bremicker import get_bremicker, get_bremicker_by_time
 from ...db.mongodb import AsyncIOMotorClient, get_database
-from .utils import (generate_id, generate_single_id)
+from .utils import (generate_id, generate_single_id, delete_simulation_files)
 
 router = APIRouter()
 
@@ -26,7 +26,9 @@ async def start_prediction(inputs: PredictionInput = example_prediction_input, d
             print("Simulation with %s vehicles" % str(inputs.vehicleNumber))
         sim_id = generate_id(inputs)
         # print('sim id:', sim_id)
-        return await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=False).predict_emissions()
+        result = await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=False).predict_emissions()
+        await delete_simulation_files()
+        return result
     except Exception as e:
         print(str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -44,7 +46,9 @@ async def start_single_prediction(inputs: PredictionInput = example_prediction_i
         inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
     print(inputs.vehicleNumber)
     sim_id = generate_single_id(inputs)
-    return await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=True).predict_emissions()
+    result = await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=True).predict_emissions()
+    await delete_simulation_files()
+    return
     # except Exception as e:
     #     print(str(e))
     #     raise HTTPException(status_code=500, detail=str(e))
