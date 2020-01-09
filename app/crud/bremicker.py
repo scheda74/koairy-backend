@@ -69,6 +69,10 @@ async def get_bremicker_by_time(conn: AsyncIOMotorClient, box_id=None, start_dat
     df['time'] = pd.to_datetime(df['time'], format="%Y-%m-%d %H:%M")
     df = df.set_index('time')
     df = df.between_time(start_hour, end_hour)
+    if df.shape[0] == 0:
+        print("[BREMICKER] start and end time not found. Fetching yesterday")
+        yesterday = datetime.datetime.strftime(datetime.datetime.now() - timedelta(1), '%Y-%m-%d')
+        return await get_bremicker_by_time(conn, start_date=yesterday, end_date=yesterday, start_hour=start_hour, end_hour=end_hour)
     df.index = df.index.strftime("%Y-%m-%d %H:%M")
     if box_id is not None:
         return df[[box_id]]
