@@ -96,7 +96,7 @@ class Predictor(object):
 
             raw_emissions = await get_simulated_traffic_from_sim(self.db, self.sim_id)
             raw_emissions = json.loads(raw_emissions['emissions'])
-            print(raw_emissions)
+            # print(raw_emissions)
             return {'prediction': result, 'traffic': raw_emissions}
         elif self.predictionModel == 'cnn':
             print('cnn not yet specified, lin reg started')
@@ -187,6 +187,17 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
         result = df_test[[output_key, '%s_predicted' % output_key, '%s_simulated' % sim_key]]
         mea = mean_absolute_error(result[output_key].to_numpy(), result['%s_predicted' % output_key].to_numpy())
         # self.save_df_to_plot(result[[output_key, '%s_lin_predicted' % output_key]], 'new_%s_lin_dist_prediction' % output_key)
+
+        # font = {'family': 'arial',
+        #         'color': 'black',
+        #         'weight': 'bold',
+        #         'size': 16,
+        #         }
+        # result.plot(figsize=(20, 10), title="Linear Regression - %s Prediction" % output_key.upper())
+        # plt.xlabel("time per day (7am - 10am)", fontdict=font)
+        # plt.ylabel("μg/m³", fontdict=font)
+        # plt.show()
+
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
         max_key = result.idxmax(axis=1).iloc[0]
         result = result.to_dict(orient='index')
@@ -201,8 +212,9 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
             input_keys.append('NOx')
         else:
             input_keys.append('PMx')
-        self.inputs.input_keys.append(self.inputs.box_id)
-        # mp = ModelPreProcessor(db=self.db, inputs=self.inputs, sim_id=self.sim_id)
+        if self.inputs.box_id not in self.input_keys:
+            self.inputs.input_keys.append(self.inputs.box_id)
+
         df = await self.mp.aggregate_data(
             self.box_id,
             self.start_date,
@@ -210,7 +222,36 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
             self.start_hour,
             self.end_hour
         )
-        # print(df)
+
+        # df_print = df.copy()
+        # df_print = df_print[[output_key, 'pm10'] + input_keys]
+        # print(input_keys)
+        # df_print = df_print.rename(columns={672: 'vehicles'})
+        # print(df_print)
+
+        # font = {'family': 'arial',
+        #         'color': 'black',
+        #         'weight': 'bold',
+        #         'size': 16,
+        #         }
+        # df_print.plot(figsize=(20, 10), title="Sensor Data", sharex=True, subplots=True, layout=(9, 1))
+        # plt.xlabel("time per day (7am - 10am)", fontdict=font)
+        # # plt.ylabel("μg/m³", fontdict=font)
+        # plt.show()
+
+        # fig, axes = plt.subplots(nrows=9, ncols=1)
+        # fig.set_figheight(10)
+        # fig.set_figwidth(20)
+        # df[0].plot(ax=axes[0, 0], style='r', label='Series')
+        # axes[0, 0].set_title(0)
+        # df[1].plot(ax=axes[0, 1])
+        # axes[0, 1].set_title(1)
+        # df[2].plot(ax=axes[1, 0])
+        # axes[1, 0].set_title(2)
+        # df[3].plot(ax=axes[1, 1])
+        # axes[1, 1].set_title(3)
+        # fig.tight_layout()
+
         df_train, df_test = format_test_train_set(df, self.end_date)
 
         scaler = pre.StandardScaler()
@@ -241,11 +282,21 @@ class MLPRegressorStrategy(PredictorStrategyAbstract):
         df_test = df_test.rename(columns={sim_key: sim_key + '_simulated'})
         # df_test[output_key + '_simulated'] = df_test[sim_key]
         result = df_test[[output_key, '%s_predicted' % output_key, '%s_simulated' % sim_key]]
-        # print(result)
+
         mea = mean_absolute_error(result[output_key].to_numpy(), result['%s_predicted' % output_key].to_numpy())
         # self.save_df_to_plot(result[[output_key, '%s_mlp_predicted' % output_key]], 'new_%s_mlp_dist_regressor' % output_key.replace('.', '-'))
         result.index = result.index.strftime('%Y-%m-%d %H:%M')
-        # print(result)
+
+        # font = {'family': 'arial',
+        #         'color': 'black',
+        #         'weight': 'bold',
+        #         'size': 16,
+        #         }
+        # result.plot(figsize=(20, 10), title="Multi-Layer Perceptron Regressor - %s Prediction" % output_key.upper())
+        # plt.xlabel("time per day (7am - 10am)", fontdict=font)
+        # plt.ylabel("μg/m³", fontdict=font)
+        # plt.show()
+
         max_key = result.idxmax(axis=1).iloc[0]
         result = result.to_dict(orient='index')
         return {'key': output_key, 'mea': mea, 'prediction': result, 'maxKey': max_key}
@@ -282,12 +333,13 @@ def format_test_train_set(df, end_date):
     date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
     date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
 
-    train_mask = (df.index < date_to_predict)
-    df_train = df.loc[train_mask]
-    predict_mask = (df.index >= date_to_predict)
-    df_test = df.loc[predict_mask]
-    return [df_train, df_test]
-    # rows = round(df.shape[0] * 0.8)
-    # df_train = df.iloc[:rows]
-    # df_test = df.iloc[rows:]
+    # train_mask = (df.index < date_to_predict)
+    # df_train = df.loc[train_mask]
+    # predict_mask = (df.index >= date_to_predict)
+    # df_test = df.loc[predict_mask]
     # return [df_train, df_test]
+
+    rows = round(df.shape[0] * 0.8)
+    df_train = df.iloc[:rows]
+    df_test = df.iloc[rows:]
+    return [df_train, df_test]

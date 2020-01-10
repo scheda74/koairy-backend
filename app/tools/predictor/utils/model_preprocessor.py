@@ -144,7 +144,7 @@ class ModelPreProcessor():
         df_formatted.index = df_formatted.index.strftime("%Y-%m-%d %H:%M")
         df_formatted = df_formatted.rename(columns={'pm2.5': 'pm25'})
         df_formatted.columns = df_formatted.columns.astype(str)
-        print(df_formatted)
+        # print(df_formatted)
         await insert_aggregated_data(self.db, self.sim_id, df_formatted.to_dict(orient='index'))
         return df_combined.dropna()
 
