@@ -333,13 +333,13 @@ def format_test_train_set(df, end_date):
     date_to_predict = pd.datetime.strptime(end_date + " 00:00", "%Y-%m-%d %H:%M")
     date_to_predict = df.index[df.index.get_loc(date_to_predict, method='nearest')].replace(hour=0)
 
-    # train_mask = (df.index < date_to_predict)
-    # df_train = df.loc[train_mask]
-    # predict_mask = (df.index >= date_to_predict)
-    # df_test = df.loc[predict_mask]
-    # return [df_train, df_test]
-
-    rows = round(df.shape[0] * 0.8)
-    df_train = df.iloc[:rows]
-    df_test = df.iloc[rows:]
+    train_mask = (df.index < date_to_predict)
+    df_train = df.loc[train_mask]
+    predict_mask = (df.index >= date_to_predict)
+    df_test = df.loc[predict_mask]
     return [df_train, df_test]
+
+    # rows = round(df.shape[0] * 0.8)
+    # df_train = df.iloc[:rows]
+    # df_test = df.iloc[rows:]
+    # return [df_train, df_test]
