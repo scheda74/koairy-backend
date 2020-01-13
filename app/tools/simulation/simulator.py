@@ -182,8 +182,8 @@ class Simulator:
             print(self.df_traffic)
             self.df_traffic = self.df_traffic.reset_index()
             self.df_traffic = self.df_traffic[[self.box_id]]
-            self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 3600)
-            detector_steps = [step * 3600 for step in range(0, self.df_traffic.shape[0])]
+            self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 600)
+            detector_steps = [step * 600 for step in range(0, self.df_traffic.shape[0])]
             max_vehicles = self.df_traffic[self.box_id].max()
             current_step = 0
             detected_vehicles = 0
