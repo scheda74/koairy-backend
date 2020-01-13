@@ -40,18 +40,19 @@ async def start_single_prediction(inputs: PredictionInput = example_prediction_i
     """
     Training and prediction using a Long-Short-Term-Memory Recurrent Neural Network
     """
-    # try:
-    # df_traffic = await get_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
-    df_traffic = await get_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
-    print(df_traffic)
-    if inputs.vehicleNumber is None:
-        inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
-    print(inputs.vehicleNumber)
-    sim_id = generate_single_id(inputs)
-    result = await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=True).predict_emissions()
-    await delete_simulation_files()
-    return
-    # except Exception as e:
-    #     print(str(e))
-    #     raise HTTPException(status_code=500, detail=str(e))
+    try:
+        # df_traffic = await get_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
+        df_traffic = await get_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
+        print(df_traffic)
+        if inputs.vehicleNumber is None:
+            inputs.vehicleNumber = int(df_traffic[inputs.box_id].sum()) if df_traffic is not None else 1000
+        print(inputs.vehicleNumber)
+        sim_id = generate_single_id(inputs)
+        result = await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=True).predict_emissions()
+        await delete_simulation_files()
+        return result
+    except Exception as e:
+        print(str(e))
+        await drop_simulation_data(db, sim_id)
+        raise HTTPException(status_code=500, detail=str(e))
 
