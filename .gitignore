@@ -1,4 +1,4 @@
 simulation/data/*
 
 app/tools/simulation/data/emission-input/*
-app/tools/simulation/data/emission-output/*
+app/tools/simulation/data/emission-output/*.xml
