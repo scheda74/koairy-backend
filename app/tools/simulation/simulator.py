@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import json
-from random import randrange, choice, choices
+from random import randrange, choice, choices, randint
 import pandas as pd
 from ..predictor.utils.bremicker_boxes import bremicker_boxes
 from ...core.config import (
@@ -70,7 +70,7 @@ class Simulator:
         emission_weights = list(self.veh_dist.values())
         box_ids = list(bremicker_boxes.keys())
 
-        detector_steps = [step * 600 for step in range(0, self.df_traffic.shape[0] + 1)]
+        detector_steps = [step * 600 for step in range(0, self.df_traffic.shape[0])]
         self.df_traffic = self.df_traffic.fillna(0)
         self.df_traffic = self.df_traffic.reset_index()
         self.df_traffic = self.df_traffic[box_ids]
@@ -163,7 +163,10 @@ class Simulator:
             ]
             if not os.path.exists(self.emission_output_filepath):
                 print(sumoCMD)
-                traci.start(sumoCMD, 4041)
+                port = 4041
+                if self.is_port_in_use(4041):
+                    port = 4042 + randint(0, 57)
+                traci.start(sumoCMD, port)
                 await self.run()
             else:
                 print("[SIMULATOR] Same simulation already exists. Parsing old file...")
@@ -180,7 +183,7 @@ class Simulator:
             self.df_traffic = self.df_traffic.reset_index()
             self.df_traffic = self.df_traffic[[self.box_id]]
             self.df_traffic.index = pd.Series(self.df_traffic.index).apply(lambda x: x * 3600)
-            detector_steps = [step * 3600 for step in range(0, self.df_traffic.shape[0] + 1)]
+            detector_steps = [step * 3600 for step in range(0, self.df_traffic.shape[0])]
             max_vehicles = self.df_traffic[self.box_id].max()
             current_step = 0
             detected_vehicles = 0
@@ -264,7 +267,10 @@ class Simulator:
             ]
             if not os.path.exists(self.emission_output_filepath):
                 print(sumoCMD)
-                traci.start(sumoCMD, 4041)
+                port = 4041
+                if self.is_port_in_use(4041):
+                    port = 4042 + randint(0, 57)
+                traci.start(sumoCMD, port)
                 await self.run_single()
             else:
                 print("[SIMULATOR] Same simulation already exists. Parsing old file...")
@@ -274,3 +280,8 @@ class Simulator:
             # df = pd.DataFrame.from_dict(json.loads(raw["emissions"]), orient='index')
             # df = df.groupby(['time', 'lat', 'lng'])[['CO2', 'CO', 'NOx', 'PMx', 'fuel']].sum()
             return df.to_json(orient='index')
+
+    def is_port_in_use(self, port):
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(('localhost', port)) == 0

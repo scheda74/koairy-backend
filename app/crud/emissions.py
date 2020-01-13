@@ -89,3 +89,13 @@ async def get_aggregated_data_from_sim(conn: AsyncIOMotorClient, sim_id: str):
             return None
     except Exception as e:
         raise Exception("[MONGODB] Error while fetching from database: %s" % str(e))
+
+
+async def drop_simulation_data(conn: AsyncIOMotorClient, sim_id: str):
+    try:
+        await conn[database_name][training_data_collection_name].delete_one({"sim_id": sim_id})
+        await conn[database_name][simulated_traffic_collection_name].delete_one({"sim_id": sim_id})
+        await conn[database_name][raw_emission_collection_name].delete_one({"sim_id": sim_id})
+        return
+    except Exception as e:
+        raise Exception("[MONGODB] Error while deleting collections: %s" % str(e))
