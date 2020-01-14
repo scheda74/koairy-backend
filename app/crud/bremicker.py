@@ -52,12 +52,12 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None
                 result.append(df)
             except Exception as e:
                 print(str(e))
-                raise HTTPException(status_code=500, detail='[BREMICKER] Error in fetching from db: %s' % str(e))
+                raise Exception('[BREMICKER] Error in fetching from db: %s' % str(e))
         df = pd.concat(result).fillna(0)
         # print(df)
         return df
     except Exception as e:
-        raise HTTPException(status_code=500, detail='[BREMICKER] Error in fetching from db: %s' % str(e))
+        raise Exception('[BREMICKER] Error in fetching from db: %s' % str(e))
 
 
 async def get_bremicker_by_time(conn: AsyncIOMotorClient, box_id=None, start_date=None, end_date=None, start_hour='0:00', end_hour='23:00', grouper_freq='10Min'):
@@ -92,18 +92,18 @@ async def fetch_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=No
     try:
         response = requests.get(BREMICKER_URL, params=params)
         if response is None:
-            raise HTTPException(status_code=500, detail='[BREMICKER] Fetched data from server returned nothing - None')
+            raise Exception('[BREMICKER] Fetched data from server returned nothing - None')
         response = response.json()
         if len(response) == 0:
-            # raise HTTPException(status_code=500, detail='[BREMICKER] Fetched data from server returned nothing')
-            response = await insert_bremicker(conn, [{'measure_date': start_date, 'data': []}])
-            return response
+            raise Exception('[BREMICKER] Fetched data from server returned nothing')
+            # response = await insert_bremicker(conn, [{'measure_date': start_date, 'data': []}])
+            # return response
 
         response = await format_bremicker(response)
         await insert_bremicker(conn, response)
         return response
     except JSONDecodeError as error:
-        raise HTTPException(status_code=500, detail='[BREMICKER] Error in json decoding: %s' % error)
+        raise Exception('[BREMICKER] Error in json decoding: %s' % error)
     # except Exception as e:
     #     raise HTTPException(status_code=500, detail='Error in fetching Bremicker: %s' % str(e))
 
@@ -115,7 +115,7 @@ async def insert_bremicker(conn: AsyncIOMotorClient, data):
             await conn[database_name][bremicker_collection_name].find_one_and_replace({'measure_date': item['measure_date']}, item, upsert=True)
             print("[MONGODB] Successfully saved bremicker data of %s" % item['measure_date'])
     except Exception as e:
-        raise HTTPException(status_code=500, detail='[BREMICKER] Error in saving data to db: %s' % str(e))
+        raise Exception('[BREMICKER] Error in saving data to db: %s' % str(e))
     else:
         print("[MONGODB] Bremicker data successfully saved!")
         return data
