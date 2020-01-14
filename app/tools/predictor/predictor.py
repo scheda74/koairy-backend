@@ -59,7 +59,7 @@ class Predictor(object):
             # plt.savefig(PLOT_BASEDIR + '/new_aggr_data')
             raw_emissions = await get_simulated_traffic_from_sim(self.db, self.sim_id)
             raw_emissions = json.loads(raw_emissions['emissions'])
-            print(raw_emissions)
+            # print(raw_emissions)
             return {'prediction': result, 'traffic': raw_emissions}
         elif self.predictionModel == 'lstm':
             strategy = LongShortTermMemoryRecurrentNeuralNetworkStrategy(
@@ -169,7 +169,10 @@ class LinearRegressionStrategy(PredictorStrategyAbstract):
         # print(df_combined)
 
         df_train, df_test = format_test_train_set(df_combined, self.end_date)
-
+        # print(df_train)
+        # print(df_test)
+        # print(input_keys)
+        # print(output_key)
         model = LinearRegression()
         model.fit(df_train[input_keys], df_train[output_key])
 

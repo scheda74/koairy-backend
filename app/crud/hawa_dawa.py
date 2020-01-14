@@ -167,11 +167,14 @@ async def fetch_data_by_month_from_hawa_dawa(start_date, end_date):
         'missing_value': -999,
         'crs': 'global'
     }
-    response = requests.get(HAWA_DAWA_URL, params=params)
-    if response:
-        return response.json()
-    else:
-        return {}
+    try:
+        response = requests.get(HAWA_DAWA_URL, params=params)
+        if response is not None:
+            return response.json()
+        else:
+            return {}
+    except Exception as e:
+        raise Exception("[HAWA DAWA] Failed to fetch data: %s" % str(e))
 
 async def fetch_today_from_hawa_dawa():
     today = datetime.date.today().strftime('%Y-%m-%d')
