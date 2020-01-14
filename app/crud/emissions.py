@@ -25,9 +25,9 @@ async def get_raw_emissions_from_sim(conn: AsyncIOMotorClient, sim_id: str):
         emission_doc = await conn[database_name][raw_emission_collection_name].find_one({"sim_id": sim_id},
                                                                                         projection={"_id": False})
 
-        if emission_doc is None or len(emission_doc["emissions"]) == 0:
-            await drop_simulation_data(conn, sim_id)
-            raise Exception("[MONGODB] Raw emissions empty")
+        # if emission_doc is None or len(emission_doc["emissions"]) == 0:
+        #     await drop_simulation_data(conn, sim_id)
+        #     raise Exception("[MONGODB] Raw emissions empty")
     except Exception as e:
         raise Exception("[MONGODB] Error while fetching from database: %s" % str(e))
     else:
@@ -39,9 +39,9 @@ async def get_simulated_traffic_from_sim(conn: AsyncIOMotorClient, sim_id: str):
         emission_doc = await conn[database_name][simulated_traffic_collection_name].find_one({"sim_id": sim_id},
                                                                                         projection={"_id": False})
 
-        if emission_doc is None or len(emission_doc["emissions"]) == 0:
-            await drop_simulation_data(conn, sim_id)
-            raise Exception("[MONGODB] Raw emissions empty")
+        # if emission_doc is None or len(emission_doc["emissions"]) == 0:
+        #     await drop_simulation_data(conn, sim_id)
+        #     raise Exception("[MONGODB] Raw emissions empty")
     except Exception as e:
         raise Exception("[MONGODB] Error while fetching from database: %s" % str(e))
     else:
