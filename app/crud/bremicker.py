@@ -36,7 +36,8 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None
         result = []
         async for document in conn[database_name][bremicker_collection_name].find({"$and": [{"measure_date": {"$gte": start_date}}, {"measure_date": {"$lte": end_date}}]}):
             if document is None or len(document['data']) == 0:
-                document = await fetch_bremicker(conn, document['measure_date'], document['measure_date'])
+                await fetch_bremicker(conn, document['measure_date'], document['measure_date'])
+                continue
             try:
                 print('fetching data from %s' % document['measure_date'].strftime('%Y-%m-%d'))
                 df = pd.DataFrame.from_dict(document['data'])
@@ -56,6 +57,7 @@ async def get_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=None
         # print(df)
         return df
     except Exception as e:
+        await drop_bremicker(conn)
         raise Exception('[BREMICKER] Error in fetching from db: %s' % str(e))
 
 
@@ -111,7 +113,9 @@ async def fetch_bremicker(conn: AsyncIOMotorClient, start_date=None, end_date=No
         await insert_bremicker(conn, response)
         return response
     except JSONDecodeError as error:
-        raise Exception('[BREMICKER] Error in json decoding: %s' % error)
+        print("[BREMICKER] JSON decoding error from server. Trying to fetch again...")
+        return await fetch_bremicker(conn, start_date, end_date)
+        # raise Exception('[BREMICKER] Error in json decoding: %s' % error)
     # except Exception as e:
     #     raise HTTPException(status_code=500, detail='Error in fetching Bremicker: %s' % str(e))
 
