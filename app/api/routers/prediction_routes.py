@@ -20,20 +20,20 @@ async def start_prediction(inputs: PredictionInput = example_prediction_input, d
     Training and prediction using full map
     """
     sim_id = generate_id(inputs)
-    # try:
+    try:
     # df_traffic = await get_latest_bremicker(db, inputs.start_hour, inputs.end_hour)
-    df_traffic = await get_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
-    if inputs.vehicleNumber is None:
-        inputs.vehicleNumber = round(df_traffic.sum(axis=1, skipna=True).sum(axis=0) * 1.25)
-        print("Simulation with %s vehicles" % str(inputs.vehicleNumber))
-    # print('sim id:', sim_id)
-    result = await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=False).predict_emissions()
-    await delete_simulation_files()
-    return result
-    # except Exception as e:
-    #     print("Error caught: %s" % str(e))
-    #     await drop_simulation_data(db, sim_id)
-    #     raise HTTPException(status_code=500, detail="Prediction failed: %s" % str(e))
+        df_traffic = await get_bremicker_by_time(db, start_hour=inputs.start_hour, end_hour=inputs.end_hour)
+        if inputs.vehicleNumber is None:
+            inputs.vehicleNumber = round(df_traffic.sum(axis=1, skipna=True).sum(axis=0) * 1.25)
+            print("Simulation with %s vehicles" % str(inputs.vehicleNumber))
+        # print('sim id:', sim_id)
+        result = await Predictor(db, inputs, sim_id, df_traffic=df_traffic, is_single_sim=False).predict_emissions()
+        await delete_simulation_files()
+        return result
+    except Exception as e:
+        print("Error caught: %s" % str(e))
+        await drop_simulation_data(db, sim_id)
+        raise HTTPException(status_code=500, detail="Prediction failed: %s" % str(e))
 
 @router.post('/prediction/single')
 async def start_single_prediction(inputs: PredictionInput = example_prediction_input, db: AsyncIOMotorClient=Depends(get_database)):
