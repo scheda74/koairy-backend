@@ -62,9 +62,9 @@ async def insert_raw_emissions(conn: AsyncIOMotorClient, sim_id: str, emissions:
     try:
         await conn[database_name][raw_emission_collection_name].insert_one(raw_doc)
     except Exception as e:
-        raise Exception("[MONGODB] Error while saving to database: %s" % str(e))
+        raise Exception("[MONGODB] Error while saving raw emissions to database: %s" % str(e))
     else:
-        print("[MONGODB] Saving simulated emissions successful!")
+        print("[MONGODB] Saving raw emissions successful!")
 
 
 async def insert_simulated_traffic(conn: AsyncIOMotorClient, sim_id: str, emissions: dict):
@@ -73,9 +73,9 @@ async def insert_simulated_traffic(conn: AsyncIOMotorClient, sim_id: str, emissi
     try:
         await conn[database_name][simulated_traffic_collection_name].insert_one(raw_doc)
     except Exception as e:
-        raise Exception("[MONGODB] Error while saving to database: %s" % str(e))
+        raise Exception("[MONGODB] Error while saving to simulated traffic to database: %s" % str(e))
     else:
-        print("[MONGODB] Saving simulated emissions successful!")
+        print("[MONGODB] Saving simulated traffic successful!")
 
 
 async def insert_aggregated_data(conn: AsyncIOMotorClient, sim_id: str, data: dict):
