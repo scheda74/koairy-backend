@@ -10,7 +10,8 @@ from ....db.mongodb import AsyncIOMotorClient, get_database
 from ....crud.emissions import (
     get_raw_emissions_from_sim,
     get_aggregated_data_from_sim,
-    insert_aggregated_data
+    insert_aggregated_data,
+    drop_simulation_data
 )
 from ...simulation.simulator import Simulator
 from .bremicker_boxes import bremicker_boxes
@@ -76,7 +77,7 @@ class ModelPreProcessor():
         if end_date is None:
             end_date = end_date = datetime.date.today().strftime("%Y-%m-%d")
         data = await get_aggregated_data_from_sim(self.db, self.sim_id)
-        if data is not None:
+        if data is not None and len(data['aggregated']) != 0:
             try:
                 df = pd.DataFrame.from_dict(data["aggregated"], orient='index')
                 df.index = pd.to_datetime(df.index)
@@ -86,7 +87,8 @@ class ModelPreProcessor():
                 return df
             except Exception as e:
                 raise Exception("[MODEL PREPROCESSOR] Error while formatting aggregated data from db: %s" % str(e))
-
+        elif data is not None and len(data['aggregated']) == 0:
+            await drop_simulation_data(self.db, self.sim_id)
         print("[MODEL PREPROCESSOR] Aggregated data for simulation not found! Fetching from sources...")
         # df_air = await self.fetch_air_and_traffic(box_id, start_date, end_date, start_hour, end_hour)
         df_air = await self.fetch_air_and_traffic(start_date, end_date, start_hour, end_hour)
